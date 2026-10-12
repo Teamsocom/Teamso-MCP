@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { TOOL_NAMES, VERSION } from '../dist/server.js';
+import { HELP_BUNDLE } from './helpers.mjs';
 
 const BIN = fileURLToPath(new URL('../dist/index.js', import.meta.url));
 
@@ -72,4 +74,48 @@ test('the stdio binary refuses to start without a valid token', async () => {
   const wrong = await runBin({ TEAMSO_ACCESS_TOKEN: 'not-a-pat' }, [], 0);
   assert.equal(wrong.code, 1);
   assert.match(wrong.stderr, /personal access token/);
+});
+
+test('the stdio binary downloads help from TEAMSO_HELP_BASE_URL and links to TEAMSO_HELP_PUBLIC_URL', async () => {
+  const requested = [];
+  const mirror = createServer((request, response) => {
+    requested.push(request.url);
+    if (request.url === '/how-to/bundle.tr.json') {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(JSON.stringify(HELP_BUNDLE));
+    } else {
+      response.writeHead(404);
+      response.end();
+    }
+  });
+  await new Promise(resolve => mirror.listen(0, '127.0.0.1', resolve));
+  const { port } = mirror.address();
+  try {
+    const { responses } = await runBin({
+      TEAMSO_ACCESS_TOKEN: 'tms_pat_dummy',
+      TEAMSO_HELP_BASE_URL: `http://127.0.0.1:${port}`,
+      TEAMSO_HELP_PUBLIC_URL: 'https://public.teamso.test',
+    }, [
+      {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'smoke', version: '1.0.0' } },
+      },
+      { jsonrpc: '2.0', method: 'notifications/initialized' },
+      {
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: { name: 'get_help_article', arguments: { id: 'performance.goal-entry-employee' } },
+      },
+    ], 2);
+
+    const text = responses[1].result.content.map(block => block.text).join('\n');
+    assert.match(text, /\]\(https:\/\/public\.teamso\.test\/how-to\/performance\/goal\.png\)/);
+    assert.doesNotMatch(text, /127\.0\.0\.1/);
+    assert.deepEqual(requested, ['/how-to/bundle.tr.json']);
+  } finally {
+    await new Promise(resolve => mirror.close(resolve));
+  }
 });

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.2
+
+### Added
+
+- `TeamsoClient` option `helpPublicUrl` (stdio: `TEAMSO_HELP_PUBLIC_URL`): the public
+  site used for every help link and image in tool output. It defaults to
+  `helpBaseUrl`, which stays the address the help bundle is downloaded from, so a
+  hosted server can download the bundle from an internal mirror (e.g. a loopback
+  URL) without that address reaching users.
+
 ## 1.1.1
 
 ### Fixed

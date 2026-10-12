@@ -43,7 +43,17 @@ test('constructor validates the token and the trusted proxy context', () => {
   const client = new TeamsoClient(TOKEN, 'https://api.teamso.test/v1///', { helpBaseUrl: 'https://teamso.test/' });
   assert.equal(client.baseUrl, 'https://api.teamso.test/v1');
   assert.equal(client.helpBaseUrl, 'https://teamso.test');
-  assert.equal(new TeamsoClient(TOKEN).baseUrl, 'https://api.teamso.com/v1');
+  assert.equal(client.helpPublicUrl, 'https://teamso.test', 'public help site defaults to the download site');
+  const mirrored = new TeamsoClient(TOKEN, API_BASE, {
+    helpBaseUrl: 'http://127.0.0.1:1460/',
+    helpPublicUrl: 'https://teamso.test//',
+  });
+  assert.equal(mirrored.helpBaseUrl, 'http://127.0.0.1:1460');
+  assert.equal(mirrored.helpPublicUrl, 'https://teamso.test');
+  const defaults = new TeamsoClient(TOKEN);
+  assert.equal(defaults.baseUrl, 'https://api.teamso.com/v1');
+  assert.equal(defaults.helpBaseUrl, 'https://teamso.com');
+  assert.equal(defaults.helpPublicUrl, 'https://teamso.com');
 });
 
 test('requests carry the bearer token, JSON headers and no proxy headers by default', async () => {
@@ -228,6 +238,16 @@ test('the help bundle is cached, refreshed after the TTL and served stale on fai
   healthy = true;
   await client.getHelpBundle('tr');
   assert.equal(downloads, 3);
+});
+
+test('the help bundle is downloaded from helpBaseUrl even when a public site is set', async () => {
+  const urls = [];
+  const client = createTestClient(async input => {
+    urls.push(String(input));
+    return json(HELP_BUNDLE);
+  }, { helpBaseUrl: 'http://127.0.0.1:1460', helpPublicUrl: 'https://public.teamso.test' });
+  await client.getHelpBundle('tr');
+  assert.deepEqual(urls, ['http://127.0.0.1:1460/how-to/bundle.tr.json']);
 });
 
 test('the help bundle download fails cleanly without a cached copy', async () => {

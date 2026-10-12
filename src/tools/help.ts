@@ -172,11 +172,12 @@ async function loadBundle(client: TeamsoClient, lang: HelpLanguage) {
   }
 }
 
+/** Public origin for links and images: never the (possibly internal) bundle download address. */
 function siteOrigin(client: TeamsoClient): string {
   try {
-    return new URL(client.helpBaseUrl).origin;
+    return new URL(client.helpPublicUrl).origin;
   } catch {
-    return client.helpBaseUrl;
+    return client.helpPublicUrl;
   }
 }
 

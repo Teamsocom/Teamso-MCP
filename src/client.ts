@@ -102,8 +102,14 @@ export interface TrustedProxyContext {
 export interface TeamsoClientOptions {
   /** Sign the caller IP so the API applies its IP allowlist and audit to the real caller. */
   trustedProxy?: TrustedProxyContext;
-  /** Site that serves the public help bundle (default `https://teamso.com`). */
+  /** Site the help bundle is downloaded from (default `https://teamso.com`). */
   helpBaseUrl?: string;
+  /**
+   * Public site used for every help link and image shown to users (default: `helpBaseUrl`).
+   * Set it when `helpBaseUrl` is an internal address (e.g. a loopback mirror), so that address
+   * never reaches tool output.
+   */
+  helpPublicUrl?: string;
   /** Custom fetch implementation (tests, instrumentation). Defaults to the global fetch. */
   fetch?: typeof fetch;
   /** Per-request timeout in milliseconds (default 30 000). */
@@ -189,6 +195,8 @@ interface HelpCacheEntry {
 export class TeamsoClient {
   readonly baseUrl: string;
   readonly helpBaseUrl: string;
+  /** Origin of the help links and images in tool output. */
+  readonly helpPublicUrl: string;
   // ES private fields: unlike TypeScript `private`, they stay out of
   // console.log, util.inspect and JSON.stringify, so the credentials never
   // reach a log line through the client object.
@@ -219,6 +227,7 @@ export class TeamsoClient {
     this.#accessToken = accessToken;
     this.baseUrl = trimTrailingSlashes(baseUrl || DEFAULT_BASE_URL);
     this.helpBaseUrl = trimTrailingSlashes(options.helpBaseUrl || DEFAULT_HELP_BASE_URL);
+    this.helpPublicUrl = trimTrailingSlashes(options.helpPublicUrl || this.helpBaseUrl);
     this.#trustedProxy = trustedProxy;
     this.fetchImpl = options.fetch ?? ((input, init) => fetch(input, init));
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;

@@ -438,9 +438,9 @@ const ajv = new Ajv2020({ strict: false, allErrors: true });
  * Connects an MCP client to a fresh server over an in-memory transport and
  * lists the tools first, so the SDK client validates every `structuredContent`.
  */
-export async function withMcp(overrides, callback) {
+export async function withMcp(overrides, callback, clientOptions = {}) {
   const api = createMockApi(overrides);
-  const server = createMcpServer(createTestClient(api.fetch));
+  const server = createMcpServer(createTestClient(api.fetch, clientOptions));
   const client = new Client({ name: 'test-client', version: '1.0.0' });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);

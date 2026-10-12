@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { JSON_SCHEMA_2020_12, TOOL_NAMES } from '../dist/server.js';
 import {
+  HELP_BUNDLE,
   ME,
   MY_LEAVE,
   PDF_BYTES,
@@ -113,6 +114,32 @@ test('get_help_article returns Markdown with absolute links', async () => {
     assert.equal(missing.isError, true);
     assert.match(textOf(missing), /search_help_articles/);
   });
+});
+
+test('help tools download from helpBaseUrl but link to helpPublicUrl', async () => {
+  const mirror = '127.0.0.1:1460';
+  const options = { helpBaseUrl: `http://${mirror}`, helpPublicUrl: 'https://public.teamso.test/' };
+  await withMcp([[`GET ${mirror}/how-to/bundle.tr.json`, () => HELP_BUNDLE]], async ({ call, calls }) => {
+    const search = await call('search_help_articles', { query: 'Hedef nasıl girilir' });
+    assert.notEqual(search.isError, true);
+    assert.equal(search.structuredContent.results[1].url,
+      'https://public.teamso.test/dashboard/help?article=performance.overview');
+
+    const article = await call('get_help_article', { id: 'performance.goal-entry-employee' });
+    assert.notEqual(article.isError, true);
+    const text = textOf(article);
+    assert.match(text, /\]\(https:\/\/public\.teamso\.test\/how-to\/performance\/goal\.png\)/);
+    assert.match(text, /Source: https:\/\/help\.teamso\.com\/tr\/articles\/1-hedef-girisi/, 'absolute urls stay as they are');
+
+    const overview = await call('get_help_article', { id: 'performance.overview' });
+    assert.match(textOf(overview), /Source: https:\/\/public\.teamso\.test\/dashboard\/help\?article=performance\.overview/);
+
+    const outputs = JSON.stringify([search, article, overview]);
+    assert.doesNotMatch(outputs, /127\.0\.0\.1/, 'the internal download address never reaches the output');
+    assert.ok(callsTo(calls, 'GET', mirror).length >= 1, 'bundle is fetched from the mirror');
+    assert.equal(callsTo(calls, 'GET', 'help.teamso.test').length, 0);
+    assert.equal(callsTo(calls, 'GET', 'public.teamso.test').length, 0);
+  }, options);
 });
 
 test('list_help_modules lists modules with known articles only', async () => {
