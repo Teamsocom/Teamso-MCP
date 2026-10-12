@@ -1,0 +1,84 @@
+{
+  "name": "@teamso/teamso-mcp",
+  "version": "1.0.0",
+  "description": "Official MCP server for Teamso HR — request leave, handle approvals, find colleagues, manage performance goals, read payslips and search the Teamso help center from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant",
+  "type": "module",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "bin": {
+    "teamso-mcp": "dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./tools": {
+      "types": "./dist/tools/index.d.ts",
+      "default": "./dist/tools/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "teamso",
+    "hr",
+    "hris",
+    "human-resources",
+    "leave-management",
+    "performance-management",
+    "payroll",
+    "mcp",
+    "model-context-protocol",
+    "cursor",
+    "claude",
+    "windsurf",
+    "llm"
+  ],
+  "author": "Teamso",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Teamsocom/Teamso-MCP.git"
+  },
+  "homepage": "https://teamso.com/docs/mcp-self-hosted",
+  "bugs": {
+    "url": "https://github.com/Teamsocom/Teamso-MCP/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ajv": "^8.20.0",
+    "typescript": "^5.7.0"
+  }
+}
