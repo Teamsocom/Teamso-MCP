@@ -1,6 +1,6 @@
 {
   "name": "@teamso/teamso-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Official MCP server for Teamso HR — request leave, handle approvals, find colleagues, manage performance goals, read payslips and search the Teamso help center from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant",
   "type": "module",
   "main": "dist/server.js",
@@ -20,6 +20,10 @@
     "./client": {
       "types": "./dist/client.d.ts",
       "default": "./dist/client.js"
+    },
+    "./prompts": {
+      "types": "./dist/prompts/index.d.ts",
+      "default": "./dist/prompts/index.js"
     },
     "./tools": {
       "types": "./dist/tools/index.d.ts",

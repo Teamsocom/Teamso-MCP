@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.1.0
+
+### Added
+
+- MCP prompts `request_leave` (optional `start`, `end`, `leave_type`, `note`;
+  walks `list_leave_types → calculate_leave_days →` confirm `→ request_leave_otp
+  → create_leave_request`) and `review_pending_approvals` (no arguments;
+  `list_pending_approvals →` ask per request `→ approve_or_reject_leave`).
+- `PROMPT_NAMES` and `registerPrompts` exports, also on the
+  `@teamso/teamso-mcp/prompts` subpath; `createMcpServer` registers the prompts.
+
+### Fixed
+
+- `list_my_leaves`, `cancel_leave_request` and `create_leave_request` now find
+  the caller's leaves: the API puts the owner in `user.id` and leaves `userId`
+  null.
+- Goal summaries show the manager's value and the achievement.
+
 ## 1.0.0
 
 First release.

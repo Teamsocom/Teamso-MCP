@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { TeamsoClient } from './client.js';
+import { registerPrompts } from './prompts/index.js';
 import { registerTools } from './tools/index.js';
 import { withJsonSchema2020_12 } from './utils/json-schema-dialect.js';
 import { VERSION } from './version.js';
@@ -20,6 +21,8 @@ export type {
   TeamsoClientOptions,
   TrustedProxyContext,
 } from './client.js';
+export { PROMPT_NAMES, registerPrompts } from './prompts/index.js';
+export type { PromptName } from './prompts/index.js';
 export { TOOL_NAMES, registerTools } from './tools/index.js';
 export type { ToolName } from './tools/index.js';
 export {
@@ -39,6 +42,7 @@ export const DEFAULT_INSTRUCTIONS = [
   'Leave: list_leave_types → calculate_leave_days → confirm with the user → request_leave_otp (sends an SMS code) '
     + '→ ask the user for the code → create_leave_request. Cancelling also needs a fresh SMS code. '
     + 'Dates are Turkey local time (yyyy-MM-dd or yyyy-MM-dd HH:mm).',
+  'Prompts: request_leave and review_pending_approvals walk through these flows.',
   'Approvals: list_pending_approvals → approve_or_reject_leave (a rejection needs a reason).',
   'Goals use the period title from list_performance_periods.',
   'Confirm every write (leave requests, cancellations, approvals, goal changes) with the user before calling it, '
@@ -66,6 +70,7 @@ export function createMcpServer(client: TeamsoClient, options: CreateMcpServerOp
   );
 
   registerTools(server, client);
+  registerPrompts(server);
 
   // Claude and other 2020-12-only MCP clients reject the SDK's draft-07 $schema.
   const originalConnect = server.connect.bind(server);

@@ -217,6 +217,21 @@ Approval chain:
 Goal chain:
 `list_performance_periods → list_my_goals → create_user_goal → send_goals_to_approval`
 
+## Prompts
+
+The server also publishes MCP prompts: ready-made starting points that clients
+show as slash commands or prompt pickers (`prompts/list`, `prompts/get`). A
+prompt only steers the assistant through the tools above; every write still
+needs the user's confirmation and, for leave requests, the SMS code.
+
+| Prompt | Arguments | Description |
+|--------|-----------|-------------|
+| `request_leave` | `start`, `end`, `leave_type`, `note` (all optional) | Create a leave request: `list_leave_types → calculate_leave_days →` confirm with the user `→ request_leave_otp → create_leave_request`. Missing dates are asked for; `end` defaults to `start`, `leave_type` to annual leave |
+| `review_pending_approvals` | — | Go through the leave requests waiting for your approval: `list_pending_approvals →` ask the user about each request `→ approve_or_reject_leave` |
+
+Relative dates such as *"tomorrow"* / *"yarın"* are resolved in Turkey time
+(`Europe/Istanbul`).
+
 ### LLM-friendly responses
 
 All tools publish typed MCP input and output schemas (JSON Schema 2020-12) and
@@ -271,8 +286,8 @@ error messages, and the help tools download the public help bundle without it.
 ## Hosted MCP Server
 
 Teamso also provides a hosted MCP server at `https://mcp.teamso.com/v1` that
-requires no local installation. It serves the same tools, plus Teamso's
-content tools that run inside the Teamso API. See the
+requires no local installation. It serves the same tools and prompts, plus
+Teamso's content tools that run inside the Teamso API. See the
 [MCP Server documentation](https://teamso.com/docs/teamso-mcp-server) for setup
 instructions.
 
@@ -309,11 +324,13 @@ const client = new TeamsoClient(userToken, 'https://api.teamso.com/v1', {
 
 | Export | Description |
 |--------|-------------|
-| `createMcpServer(client, options?)` | Creates an McpServer with all 28 tools registered; `options` sets `name`, `version`, `instructions` |
+| `createMcpServer(client, options?)` | Creates an McpServer with all 28 tools and both prompts registered; `options` sets `name`, `version`, `instructions` |
 | `TeamsoClient` | Teamso REST client (personal access token, envelope handling, optional trusted-proxy signing) |
 | `TeamsoApiError` | Error with `status`, `messageCode`, `apiMessage` and the response `body` |
 | `registerTools(server, client)` | Register the tools on an existing McpServer |
 | `TOOL_NAMES` | Names of the tools this package serves, for routing other names elsewhere |
+| `registerPrompts(server)` | Register the prompts on an existing McpServer |
+| `PROMPT_NAMES` | Names of the prompts this package serves (`request_leave`, `review_pending_approvals`) |
 | `withJsonSchema2020_12(transport)` | Rewrites `tools/list` schemas to JSON Schema 2020-12 on any transport |
 | `signProxyRequest(input)` | The trusted-proxy signature, for verifiers and tests |
 | `VERSION` | Package version |
@@ -322,6 +339,7 @@ const client = new TeamsoClient(userToken, 'https://api.teamso.com/v1', {
 // Import specific components
 import { TeamsoClient, TeamsoApiError } from '@teamso/teamso-mcp/client';
 import { registerTools, TOOL_NAMES } from '@teamso/teamso-mcp/tools';
+import { registerPrompts, PROMPT_NAMES } from '@teamso/teamso-mcp/prompts';
 ```
 
 ## Environment Variables
@@ -359,7 +377,7 @@ Point your client at the build instead of `npx`:
 ```
 
 The package builds itself on install (`prepare`), so it can also be installed
-straight from GitHub: `npm install github:Teamsocom/Teamso-MCP#v1.0.0`.
+straight from GitHub: `npm install github:Teamsocom/Teamso-MCP#v1.1.0`.
 
 Run the tests (mocked API, no network) with `npm test`.
 
