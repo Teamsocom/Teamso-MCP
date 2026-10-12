@@ -4,7 +4,7 @@ on:
   release:
     types: [created]
   # Publish an existing tag by hand (e.g. the first release, before npm trusted publishing is set up):
-  # gh workflow run publish.yml -f tag=v1.1.0
+  # gh workflow run publish.yml -f tag=v1.1.1
   workflow_dispatch:
     inputs:
       tag:

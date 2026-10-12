@@ -663,6 +663,7 @@ function goalLine(goal: GoalProjection): string {
       ? `manager ${goal.managerActualValue}`
       : goal.managerActualText ? `manager: ${goal.managerActualText}` : undefined,
     goal.achievementPercentage !== undefined ? `achieved ${goal.achievementPercentage}%` : undefined,
+    goal.score !== undefined ? `score ${goal.score}` : undefined,
   ].filter(Boolean);
   return `- **${goal.name}** (\`${goal.id}\`): ${parts.join(', ')}`;
 }
@@ -671,9 +672,12 @@ function goalListText(heading: string, goals: GoalProjection[], canAddGoal: bool
   if (goals.length === 0) {
     return `## ${heading}\n\nNo goals yet.${canAddGoal ? ' You can add one with `create_user_goal`.' : ''}`;
   }
-  const headers = withOwner
-    ? ['Employee', 'Goal', 'Id', 'Status', 'Weight', 'Target', 'Actual']
-    : ['Goal', 'Id', 'Status', 'Weight', 'Target', 'Actual'];
+  const scored = goals.some(goal => goal.score !== undefined);
+  const headers = [
+    ...(withOwner ? ['Employee'] : []),
+    'Goal', 'Id', 'Status', 'Weight', 'Target', 'Actual',
+    ...(scored ? ['Score'] : []),
+  ];
   const rows = goals.map(goal => {
     const row = [
       goal.name,
@@ -682,11 +686,30 @@ function goalListText(heading: string, goals: GoalProjection[], canAddGoal: bool
       goal.weight !== undefined ? `${goal.weight}%` : undefined,
       goal.targetValue ?? goal.otherText,
       goal.actualValue ?? goal.actualText,
+      ...(scored ? [goal.score] : []),
     ];
     return withOwner ? [goal.userFullName, ...row] : row;
   });
   const notes: string[] = [];
   if (!withOwner) notes.push(`Total weight: ${goals.reduce((sum, goal) => sum + (goal.weight ?? 0), 0)}%`);
+  // Teamso writes the period score while the evaluation is still in approval (so the approver sees it);
+  // it is final only once every goal of that employee is COMPLETED.
+  const owners = new Map<string, { value?: string; final: boolean }>();
+  for (const goal of goals) {
+    const owner = goal.userFullName ?? goal.userId ?? '';
+    const entry = owners.get(owner) ?? { final: true };
+    entry.final = entry.final && goal.status === 'COMPLETED';
+    if (goal.finalScore !== undefined) {
+      entry.value = `${goal.finalScore}${goal.finalScoreText ? ` (${goal.finalScoreText})` : ''}`;
+    }
+    owners.set(owner, entry);
+  }
+  const periodScores = [...owners].filter(([, entry]) => entry.value !== undefined) as [string, { value: string; final: boolean }][];
+  const scoreNote = (entry: { value: string; final: boolean }) => `${entry.value}${entry.final ? '' : ', pending approval'}`;
+  if (!withOwner && periodScores.length) notes.push(`Period score: ${scoreNote(periodScores[0]![1])}`);
+  if (withOwner && periodScores.length) {
+    notes.push(`Period scores: ${periodScores.map(([owner, entry]) => `${owner || 'employee'} ${scoreNote(entry)}`).join(', ')}`);
+  }
   if (canAddGoal) notes.push('New goals can be added.');
   return `## ${heading}\n\n${markdownTable(headers, rows)}${notes.length ? `\n\n${notes.join(' · ')}` : ''}`;
 }

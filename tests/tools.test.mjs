@@ -698,6 +698,43 @@ test('update_manager_actual_value sends the manager value', async () => {
   });
 });
 
+test('goal lists show the evaluation score and the period score (scoreValue, not the legacy score column)', async () => {
+  const goal = (id, status, scoreValue, weightedScore) => ({
+    id, userId: 'u-2', userFullName: 'Sam Smith', name: `Hedef ${id}`, status, weight: 50, periodName: 'Q4 2026',
+    actualValue: 90, managerActualValue: 92, achievementPercentage: 92,
+    score: null, scoreValue, weightedScore, userFinalScore: 4, userFinalScoreText: 'Orta',
+  });
+  await withMcp([['GET /user-goal/my', () => envelope({
+    goals: [goal('g-1', 'COMPLETED', 5, 2.5), goal('g-2', 'COMPLETED', 3, 1.5)],
+    canAddGoal: false,
+    pagination: { hasNext: false },
+  })]], async ({ call }) => {
+    const result = await call('list_my_goals', { period: 'Q4 2026' });
+    assert.notEqual(result.isError, true, textOf(result));
+    const [first] = result.structuredContent.goals;
+    assert.equal(first.score, 5);
+    assert.equal(first.weightedScore, 2.5);
+    assert.equal(first.finalScore, 4);
+    assert.equal(first.finalScoreText, 'Orta');
+    assert.match(textOf(result), /\| Score \|/);
+    assert.match(textOf(result), /Period score: 4 \(Orta\)(?!, pending)/);
+  });
+  await withMcp([['GET /user-goal/assigned', () => envelope({
+    goals: [goal('g-1', 'EVALUATION_IN_APPROVAL', 5, 2.5), goal('g-2', 'COMPLETED', 3, 1.5)],
+    canAddGoal: false,
+    pagination: { hasNext: false },
+  })]], async ({ call }) => {
+    const result = await call('list_team_goals', { period: 'Q4 2026' });
+    assert.notEqual(result.isError, true, textOf(result));
+    assert.match(textOf(result), /Period scores: Sam Smith 4 \(Orta\), pending approval/);
+  });
+  await withMcp([], async ({ call }) => {
+    const result = await call('list_my_goals', { period: 'Q4 2026' });
+    assert.doesNotMatch(textOf(result), /Score|Period score/, 'no score column before evaluation');
+    assert.equal(result.structuredContent.goals[0].score, undefined);
+  });
+});
+
 test('approve_goal_evaluation returns the final score', async () => {
   await withMcp([], async ({ call, calls }) => {
     const result = await call('approve_goal_evaluation', { period: 'q4 2026', user_id: 'u-2' });

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.1
+
+### Fixed
+
+- Goal tools showed no evaluation result: `score` was read from the API's legacy
+  `score` column, which Teamso leaves empty. Goals now carry `score` (from
+  `scoreValue`), `weightedScore`, `finalScore` and `finalScoreText`; goal lists add
+  a Score column and the period score (marked "pending approval" until every goal
+  of the employee is COMPLETED).
+
 ## 1.1.0
 
 ### Added

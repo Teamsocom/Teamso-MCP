@@ -335,7 +335,10 @@ export interface TeamsoGoal {
   managerActualText?: string | null;
   targetValue?: number | null;
   achievementPercentage?: number | null;
+  /** Legacy column; the API leaves it null. The evaluation result is `scoreValue` / `weightedScore`. */
   score?: number | null;
+  scoreValue?: number | null;
+  weightedScore?: number | null;
   userFinalScore?: number | null;
   userFinalScoreText?: string | null;
 }

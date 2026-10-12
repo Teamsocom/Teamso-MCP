@@ -321,7 +321,12 @@ export function toGoal(goal: TeamsoGoal): GoalProjection {
     managerActualValue: optionalNumber(goal.managerActualValue),
     managerActualText: optionalString(goal.managerActualText),
     achievementPercentage: optionalNumber(goal.achievementPercentage),
-    score: optionalNumber(goal.score),
+    // The evaluation result lives in scoreValue/weightedScore; `score` is a legacy column the API leaves null.
+    score: optionalNumber(goal.scoreValue ?? goal.score),
+    weightedScore: optionalNumber(goal.weightedScore),
+    // The owner's period final score once the evaluation chain has finished (same on every goal of the owner).
+    finalScore: optionalNumber(goal.userFinalScore),
+    finalScoreText: optionalString(goal.userFinalScoreText),
     canApproveGoal: goal.canApproveGoal === true,
     canReviseGoal: goal.canReviseGoal === true,
     canEnterActualValue: goal.canEnterActualValue === true,
