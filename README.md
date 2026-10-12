@@ -402,6 +402,11 @@ organization) is used.
 - [GitHub repository](https://github.com/Teamsocom/Teamso-MCP)
 - [Changelog](./CHANGELOG.md)
 
+## Contributing
+
+Issues and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Report security problems
+privately as described in [SECURITY.md](SECURITY.md).
+
 ## License
 
 MIT — see [LICENSE](./LICENSE) for details.

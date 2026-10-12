@@ -1,0 +1,15 @@
+name: Feature request
+description: Suggest a new tool or an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What would you like to do through MCP?
+      description: The Teamso task, who does it (employee, manager, HR admin) and an example request to the assistant.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Suggested tool or change
