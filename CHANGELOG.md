@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.3
+
+### Fixed
+
+- `create_leave_request` said "sent for approval" even when Teamso approved the leave on the spot (no
+  approval step for the user); the message now follows the new leave's status.
+
+### Added
+
+- `createHelpCache()` and the `helpCache` client option: servers that create a client per request share
+  one help bundle cache instead of downloading the bundle on every help tool call.
+
 ## 1.1.2
 
 ### Added

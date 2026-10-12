@@ -13,10 +13,12 @@ export {
   PROXY_TIMESTAMP_HEADER,
   TeamsoApiError,
   TeamsoClient,
+  createHelpCache,
   isFailureMessageCode,
   signProxyRequest,
 } from './client.js';
 export type {
+  HelpCache,
   ProxySignatureInput,
   TeamsoClientOptions,
   TrustedProxyContext,

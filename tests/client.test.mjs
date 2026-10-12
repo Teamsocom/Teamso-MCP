@@ -4,9 +4,11 @@ import test from 'node:test';
 import {
   TeamsoApiError,
   TeamsoClient,
+  createHelpCache,
   isFailureMessageCode,
   signProxyRequest,
 } from '../dist/client.js';
+import { createdLeaveMessage } from '../dist/tools/leave.js';
 import {
   API_BASE,
   HELP_BUNDLE,
@@ -303,4 +305,30 @@ test('connection failures name the API base URL, not the request or the token', 
     throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
   });
   await assert.rejects(timeout.getMe(), error => error.name === 'TimeoutError');
+});
+
+test('clients that share a help cache download the bundle once', async () => {
+  let downloads = 0;
+  const fetchBundle = async () => {
+    downloads++;
+    return json(HELP_BUNDLE);
+  };
+  const cache = createHelpCache();
+  const first = createTestClient(fetchBundle, { helpCache: cache });
+  const second = createTestClient(fetchBundle, { helpCache: cache });
+  await first.getHelpBundle('tr');
+  await second.getHelpBundle('tr');
+  assert.equal(downloads, 1, 'the second client reuses the shared entry');
+  await createTestClient(fetchBundle).getHelpBundle('tr');
+  assert.equal(downloads, 2, 'a client without the shared cache keeps its own');
+  const other = createTestClient(fetchBundle, { helpCache: cache, helpBaseUrl: 'https://other.teamso.test' });
+  await other.getHelpBundle('tr');
+  assert.equal(downloads, 3, 'entries are keyed by the help base URL');
+});
+
+test('the created-leave message follows the leave status', () => {
+  assert.match(createdLeaveMessage({ status: 'pending_approval' }), /sent for approval/);
+  assert.match(createdLeaveMessage({ status: 'approved' }), /approved right away/);
+  assert.match(createdLeaveMessage({ status: 'awaiting_document' }), /document/);
+  assert.match(createdLeaveMessage(null), /not visible/);
 });

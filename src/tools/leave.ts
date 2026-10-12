@@ -289,10 +289,7 @@ export function registerCreateLeaveRequest(server: McpServer, client: TeamsoClie
 
         const leave = await findCreatedLeave(client, prepared, extra.signal);
         const request = draftOf(prepared);
-        const message = leave
-          ? 'The leave request was created and sent for approval.'
-          : 'Teamso accepted the leave request, but it is not visible in your leave list yet. '
-            + 'Check it later with `list_my_leaves`.';
+        const message = createdLeaveMessage(leave);
         const lines = [
           `## Leave request created`,
           '',
@@ -479,4 +476,23 @@ function leaveTable(leaves: LeaveSummary[]): string {
       escapeCell(leave.status),
     ]),
   );
+}
+
+/** What happened to a new leave, from its status: approval chains can approve it on the spot. */
+export function createdLeaveMessage(leave: { status?: string } | null | undefined): string {
+  if (!leave) {
+    return 'Teamso accepted the leave request, but it is not visible in your leave list yet. '
+      + 'Check it later with `list_my_leaves`.';
+  }
+  switch (leave.status) {
+    case 'approved':
+    case 'completed':
+      return 'The leave request was created and approved right away (no approval step applies to it).';
+    case 'awaiting_document':
+      return 'The leave request was created and waits for its document; upload it in Teamso to start the approval.';
+    case 'rejected':
+      return 'The leave request was created but rejected by an automatic rule; see the request in Teamso.';
+    default:
+      return 'The leave request was created and sent for approval.';
+  }
 }

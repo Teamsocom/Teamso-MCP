@@ -378,7 +378,7 @@ Point your client at the build instead of `npx`:
 ```
 
 The package builds itself on install (`prepare`), so it can also be installed
-straight from GitHub: `npm install github:Teamsocom/Teamso-MCP#v1.1.2`.
+straight from GitHub: `npm install github:Teamsocom/Teamso-MCP#v1.1.3`.
 
 Run the tests (mocked API, no network) with `npm test`.
 
@@ -387,7 +387,7 @@ Run the tests (mocked API, no network) with `npm test`.
 1. Bump `version` in `package.json`, add a `CHANGELOG.md` entry, commit and push.
 2. Tag `v<version>` and create a GitHub release from it: `.github/workflows/publish.yml` type-checks,
    tests, builds and runs `npm publish --provenance --access public`.
-3. An existing tag can be published by hand: `gh workflow run publish.yml -f tag=v1.1.2`.
+3. An existing tag can be published by hand: `gh workflow run publish.yml -f tag=v1.1.3`.
 
 Authentication is npm trusted publishing (OIDC) once it is configured for `@teamso/teamso-mcp` on
 npmjs.com; until then the `NPM_TOKEN` repository secret (an automation token of the `@teamso` npm

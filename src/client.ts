@@ -116,6 +116,11 @@ export interface TeamsoClientOptions {
   timeoutMs?: number;
   /** How long a downloaded help bundle stays fresh, in milliseconds (default 10 minutes). */
   helpCacheTtlMs?: number;
+  /**
+   * Shared help bundle cache (see createHelpCache). A long-running server that creates a client per
+   * request passes one cache so the bundle is downloaded once per TTL instead of on every call.
+   */
+  helpCache?: HelpCache;
   /** Clock used for proxy timestamps and the help cache (tests). */
   now?: () => number;
 }
@@ -186,7 +191,14 @@ interface RequestOptions {
   accept?: string;
 }
 
-interface HelpCacheEntry {
+/** Help bundle cache shared between clients; keys are `<helpBaseUrl>\n<lang>`. */
+export type HelpCache = Map<string, HelpCacheEntry>;
+
+export function createHelpCache(): HelpCache {
+  return new Map();
+}
+
+export interface HelpCacheEntry {
   bundle?: HelpBundle;
   expiresAt: number;
   pending?: Promise<HelpBundle>;
@@ -206,7 +218,7 @@ export class TeamsoClient {
   private readonly timeoutMs: number;
   private readonly helpCacheTtlMs: number;
   private readonly now: () => number;
-  private readonly helpCache = new Map<HelpLanguage, HelpCacheEntry>();
+  private readonly helpCache: HelpCache;
 
   constructor(accessToken: string, baseUrl?: string, options: TeamsoClientOptions = {}) {
     if (!accessToken) throw new Error('TEAMSO_ACCESS_TOKEN is required');
@@ -233,6 +245,7 @@ export class TeamsoClient {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.helpCacheTtlMs = options.helpCacheTtlMs ?? HELP_CACHE_TTL_MS;
     this.now = options.now ?? Date.now;
+    this.helpCache = options.helpCache ?? createHelpCache();
   }
 
   // ---------------------------------------------------------------- account
@@ -550,23 +563,24 @@ export class TeamsoClient {
    */
   async getHelpBundle(lang: HelpLanguage): Promise<HelpBundle> {
     const now = this.now();
-    const entry = this.helpCache.get(lang);
+    const key = `${this.helpBaseUrl}\n${lang}`;
+    const entry = this.helpCache.get(key);
     if (entry?.bundle && now < entry.expiresAt) return entry.bundle;
     if (entry?.pending) return entry.pending;
 
     // One shared download per language; a caller's abort must not fail the others.
     const pending = this.downloadHelpBundle(lang)
       .then(bundle => {
-        this.helpCache.set(lang, { bundle, expiresAt: this.now() + this.helpCacheTtlMs });
+        this.helpCache.set(key, { bundle, expiresAt: this.now() + this.helpCacheTtlMs });
         return bundle;
       })
       .catch((error: unknown) => {
-        const stale = this.helpCache.get(lang)?.bundle;
-        this.helpCache.set(lang, { bundle: stale, expiresAt: this.now() + HELP_RETRY_AFTER_MS });
+        const stale = this.helpCache.get(key)?.bundle;
+        this.helpCache.set(key, { bundle: stale, expiresAt: this.now() + HELP_RETRY_AFTER_MS });
         if (stale) return stale;
         throw error;
       });
-    this.helpCache.set(lang, { bundle: entry?.bundle, expiresAt: entry?.expiresAt ?? 0, pending });
+    this.helpCache.set(key, { bundle: entry?.bundle, expiresAt: entry?.expiresAt ?? 0, pending });
     return pending;
   }
 
