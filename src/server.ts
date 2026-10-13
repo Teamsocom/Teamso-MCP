@@ -55,6 +55,10 @@ export const DEFAULT_INSTRUCTIONS = [
     + 'settings...): prefer a specific tool above when one fits; otherwise find_api_endpoints (or list_api_modules) '
     + '→ describe_api_endpoint → call_api_read for reads, or call_api_write for changes. '
     + 'Only endpoints the user\'s own Teamso permissions allow are listed and callable.',
+  'Turkish words → modules: "talep" = the user\'s own requests (DEMAND, /demand; "taleplerim" means these, '
+    + 'not approvals), "masraf"/"harcama" = EXPENSE, "fazla mesai" = overtime and "puantaj"/"vardiya" = TIMESHEET, '
+    + '"demirbaş"/"zimmet" = INVENTORY, "bordro" = PAY_SLIP, "aday"/"ilan" = ATS, "duyuru"/"anket" = COMMUNICATION. '
+    + '"Waiting for my approval" is list_pending_approvals plus the module\'s approval lists.',
   'call_api_write without confirm returns a preview and sends nothing: show the preview to the user and call again '
     + 'with confirm=true only after the user explicitly agrees. Never set confirm=true on your own.',
   'SMS codes: when an endpoint needs one (smsCodeRequired), after the user confirms call request_sms_code, ask the user '

@@ -876,6 +876,13 @@ function renderResponse(details: ApiEndpointDetails, requestPath: string, respon
   };
 }
 
+function isEmptyReadAnswer(error: unknown): error is TeamsoApiError {
+  return error instanceof TeamsoApiError
+    && error.status === 200
+    && (error.messageCode === 'GET_ERROR' || error.messageCode === 'ITEM_NOT_FOUND')
+    && (error.result === undefined || error.result === null);
+}
+
 function callErrorResult(error: unknown, readMode: boolean): CallToolResult {
   if (error instanceof TeamsoResponseTooLargeError) {
     return errorResult(`${error.message} MCP returns files up to ${formatBytes(MAX_FILE_BYTES)} and shortens long `
@@ -886,6 +893,15 @@ function callErrorResult(error: unknown, readMode: boolean): CallToolResult {
     && isRecord(error.body) && error.body.error === 'MCP_READ_INTENT') {
     return errorResult('Teamso refused this as a read because the endpoint changes data. Use `call_api_write` '
       + '(preview, then confirm with the user).');
+  }
+  if (readMode && isEmptyReadAnswer(error)) {
+    // Many Teamso lists answer `GET_ERROR` / `ITEM_NOT_FOUND` with HTTP 200 and no data when nothing matches.
+    return errorResult(`Teamso returned no data (\`${error.messageCode}\`${error.apiMessage && error.apiMessage !== error.messageCode
+      ? `: "${error.apiMessage}"` : ''}). Teamso list and search endpoints answer this way when there is nothing `
+      + 'to show, so for a list this most likely means there are no matching records: tell the user that '
+      + 'instead of reporting a failure (check date ranges and filters first). For a single record fetched by '
+      + 'id, it was not found or is not visible to you.\n\n'
+      + `_Teamso API: HTTP ${error.status} · \`${error.messageCode}\`_`);
   }
   return apiErrorResult(error, CALL_HINTS);
 }

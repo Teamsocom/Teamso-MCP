@@ -238,6 +238,9 @@ test('the instructions describe find → describe → call, previews and the SMS
   assert.match(DEFAULT_INSTRUCTIONS, /confirm=true only after the user explicitly agrees/);
   assert.match(DEFAULT_INSTRUCTIONS, /request_sms_code/);
   assert.match(DEFAULT_INSTRUCTIONS, /prefer a specific tool/);
+  // Turkish users say "talep" / "masraf": map them to the modules the catalog names differently
+  assert.match(DEFAULT_INSTRUCTIONS, /"talep" = the user's own requests \(DEMAND/);
+  assert.match(DEFAULT_INSTRUCTIONS, /"masraf"\/"harcama" = EXPENSE/);
 });
 
 // ----------------------------------------------------------------- toolsets
@@ -534,6 +537,21 @@ test('call_api_read turns Teamso failures into errors with the message code', as
     assert.match(textOf(denied), /refused this as a read because the endpoint changes data/);
     const forbidden = await call('call_api_read', { id: 'GET /expense-form/{id}', path_params: { id: 'forbidden' } });
     assert.match(textOf(forbidden), /not allowed to do this/);
+  });
+});
+
+test('call_api_read explains the empty-list answers (GET_ERROR / ITEM_NOT_FOUND with no data)', async () => {
+  await withApi([
+    ['GET /expense-form/list', () => softFailure('GET_ERROR', 'Get Demand failed')],
+    ['GET /expense-form/with-data', () => softFailure('GET_ERROR', 'Partial', { id: 'x' })],
+  ], async ({ call }) => {
+    const empty = await call('call_api_read', { id: 'GET /expense-form/list', query: { status: 'OPEN' } });
+    assert.equal(empty.isError, true);
+    assert.match(textOf(empty), /no matching records/);
+    assert.match(textOf(empty), /`GET_ERROR`: "Get Demand failed"/);
+    const withData = await call('call_api_read', { id: 'GET /expense-form/{id}', path_params: { id: 'with-data' } });
+    assert.equal(withData.isError, true);
+    assert.doesNotMatch(textOf(withData), /no matching records/);
   });
 });
 
@@ -897,8 +915,39 @@ test('describe results are cached per client for a minute', async () => {
 test('callApi refuses paths that could leave the catalog route', async () => {
   const api = createMockApi(catalogRoutes());
   const client = createTestClient(api.fetch);
-  for (const path of ['//evil.test/x', '/a/../b', 'relative', '/a?x=1', '/a#f', '/a/%2e%2e/b', '/a\\b']) {
+  for (const path of ['//evil.test/x', '/a/../b', 'relative', '/a?x=1', '/a#f', '/a/%2e%2e/b', '/a\\b', '/', '/a//', '/a//b', '/a/./']) {
     await assert.rejects(client.callApi({ method: 'GET', path }), /invalid API path/, path);
   }
   assert.equal(api.calls.length, 0);
+});
+
+test('callApi names the type of octet-stream exports from the file name', async () => {
+  const xlsx = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]);
+  const api = createMockApi([
+    ['GET /export/a', () => new Response(xlsx, { headers: { 'Content-Type': 'application/octet-stream', 'Content-Disposition': 'attachment; filename="Bordro_Donemi_2026_09.xlsx"' } })],
+    ['GET /export/b', () => new Response(xlsx, { headers: { 'Content-Type': 'application/octet-stream' } })],
+    ['GET /export/c', () => new Response(xlsx, { headers: { 'Content-Type': 'application/zip', 'Content-Disposition': 'attachment; filename="x.xlsx"' } })],
+  ]);
+  const client = createTestClient(api.fetch);
+  const named = await client.callApi({ method: 'GET', path: '/export/a', readIntent: true });
+  assert.equal(named.kind, 'file');
+  assert.equal(named.contentType, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  assert.equal(named.fileName, 'Bordro_Donemi_2026_09.xlsx');
+  const unnamed = await client.callApi({ method: 'GET', path: '/export/b', readIntent: true });
+  assert.equal(unnamed.contentType, 'application/octet-stream');
+  const specific = await client.callApi({ method: 'GET', path: '/export/c', readIntent: true });
+  assert.equal(specific.contentType, 'application/zip');
+});
+
+test('callApi keeps a single trailing slash of catalog paths such as GET /dashboard-shortcut/', async () => {
+  const api = createMockApi([
+    ['GET /dashboard-shortcut/', () => envelope([{ id: 's1' }])],
+    ['POST /inventory/', () => envelope({ id: 'inv-1' })],
+  ]);
+  const client = createTestClient(api.fetch);
+  const read = await client.callApi({ method: 'GET', path: '/dashboard-shortcut/', readIntent: true });
+  assert.deepEqual(read.result, [{ id: 's1' }]);
+  const write = await client.callApi({ method: 'POST', path: '/inventory/', body: { kind: 'json', value: { brand: 'x' } } });
+  assert.deepEqual(write.result, { id: 'inv-1' });
+  assert.deepEqual(api.calls.map(call => `${call.method} ${call.path}`), ['GET /dashboard-shortcut/', 'POST /inventory/']);
 });

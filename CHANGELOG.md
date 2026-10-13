@@ -32,6 +32,18 @@
 
 - `ajv` is now a runtime dependency (request body validation).
 
+### Fixed (found by the local end-to-end run against the real catalog)
+
+- Catalog paths with a trailing slash (30 endpoints, e.g. `GET /document/savedQueryListByMe/`,
+  `POST /inventory/`, `GET /dashboard-shortcut/`) were refused as "invalid API path". One trailing slash
+  is now kept; empty middle segments and dot segments are still refused.
+- Exports sent as `application/octet-stream` (payroll Excel, PDKS records, templates) now carry the type
+  of their file name (`.xlsx`, `.pdf`, `.csv`, ...), so clients can open them.
+- `call_api_read` explains Teamso's empty-list answers (`GET_ERROR` / `ITEM_NOT_FOUND` with HTTP 200 and no
+  data, e.g. `GET /demand/list` with no demands) as "no matching records" instead of a bare failure.
+- Server instructions map the Turkish words users say to modules ("talep" = the user's own demands, not
+  approvals; "masraf"/"harcama" = expenses; "demirbaş"/"zimmet" = inventory, ...).
+
 ## 1.1.3
 
 ### Fixed

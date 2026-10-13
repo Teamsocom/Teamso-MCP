@@ -679,12 +679,13 @@ export class TeamsoClient {
       throw errorFromResponse(response.status, parseJson(text), text);
     }
     if (!isJson) {
+      const fileName = fileNameFromDisposition(response.headers.get('content-disposition'));
       return {
         kind: 'file',
         status: response.status,
         data,
-        contentType: contentType.split(';')[0]!.trim() || 'application/octet-stream',
-        fileName: fileNameFromDisposition(response.headers.get('content-disposition')),
+        contentType: fileMimeType(contentType.split(';')[0]!.trim(), fileName),
+        fileName,
       };
     }
 
@@ -890,6 +891,32 @@ function withTimeout(signal: AbortSignal | undefined, timeoutMs: number): AbortS
   return controller.signal;
 }
 
+const MIME_BY_EXTENSION: Record<string, string> = {
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  xls: 'application/vnd.ms-excel',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  pdf: 'application/pdf',
+  csv: 'text/csv',
+  zip: 'application/zip',
+  xml: 'application/xml',
+  txt: 'text/plain',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+};
+
+/**
+ * Many Teamso exports answer `application/octet-stream`; the file name then tells what it is, so MCP
+ * clients can open an Excel or PDF instead of an unknown binary. A specific type from the API wins.
+ */
+export function fileMimeType(contentType: string, fileName?: string): string {
+  const generic = contentType === '' || /^(application|binary)\/octet-stream$/i.test(contentType);
+  if (!generic) return contentType;
+  const extension = fileName?.match(/\.([a-z0-9]{2,5})$/i)?.[1]?.toLowerCase();
+  return (extension && MIME_BY_EXTENSION[extension]) || 'application/octet-stream';
+}
+
 function fileNameFromDisposition(header: string | null): string | undefined {
   if (!header) return undefined;
   const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
@@ -921,11 +948,14 @@ function segment(value: string): string {
 
 /**
  * Generic calls only go to resolved catalog paths: absolute, no query or fragment, no empty or dot
- * segments, so a crafted path can never leave the API base URL or reach another route.
+ * segments, so a crafted path can never leave the API base URL or reach another route. A single
+ * trailing slash is kept: some Teamso routes are mapped with one (e.g. `GET /dashboard-shortcut/`)
+ * and do not answer without it.
  */
 function assertApiPath(path: string): void {
   if (!path.startsWith('/') || /[?#\\\s]/.test(path)) throw new Error(`Refusing to call an invalid API path: ${path}`);
   const segments = path.slice(1).split('/');
+  if (segments.length > 1 && segments[segments.length - 1] === '') segments.pop();
   if (segments.some(part => part === '' || /^(\.|%2e)+$/i.test(part))) {
     throw new Error(`Refusing to call an invalid API path: ${path}`);
   }
