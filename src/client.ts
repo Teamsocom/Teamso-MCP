@@ -222,6 +222,8 @@ interface RequestOptions {
   headers?: Record<string, string>;
   signal?: AbortSignal;
   accept?: string;
+  /** `manual` returns 3xx answers instead of following them (generic API calls). */
+  redirect?: 'follow' | 'manual' | 'error';
 }
 
 /** Help bundle cache shared between clients; keys are `<helpBaseUrl>\n<lang>`. */
@@ -651,6 +653,9 @@ export class TeamsoClient {
       signal,
       accept: 'application/json, */*;q=0.8',
       headers: request.readIntent ? { [MCP_INTENT_HEADER]: 'read' } : undefined,
+      // A redirect would leave the catalog route: fetch would follow it to any host (internal
+      // addresses included) and hand that answer to the assistant as a Teamso file.
+      redirect: 'manual',
     };
     const body = request.body;
     if (body?.kind === 'json') {
@@ -670,6 +675,11 @@ export class TeamsoClient {
     }
 
     const response = await this.send(request.method, request.path, options);
+    if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+      await response.body?.cancel().catch(() => undefined);
+      throw new TeamsoApiError(response.status || 302, 'REDIRECT_NOT_FOLLOWED',
+        'Teamso answered with a redirect; generic API calls do not follow redirects', undefined);
+    }
     const contentType = response.headers.get('content-type') ?? '';
     const data = await readLimited(response, request.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES);
     const isJson = /json/i.test(contentType) || (contentType === '' && looksLikeJson(data));
@@ -825,6 +835,7 @@ export class TeamsoClient {
         headers,
         body: options.body === undefined ? options.rawBody : JSON.stringify(options.body),
         signal: withTimeout(options.signal, this.timeoutMs),
+        ...(options.redirect ? { redirect: options.redirect } : {}),
       });
     } catch (error) {
       throw networkError(error, this.baseUrl);

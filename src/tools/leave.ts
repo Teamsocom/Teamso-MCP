@@ -67,6 +67,8 @@ const OTP_HINTS: ApiErrorHints = {
     'validation error.token is expired.': 'The SMS code has expired (codes are valid for 3 minutes). '
       + 'Call `request_leave_otp` for a new code.',
     'Token Not Found': 'No SMS code is waiting for verification. Call `request_leave_otp` first.',
+    'validation error.too many attempts.': 'Too many wrong SMS codes: this code is cancelled. Call '
+      + '`request_leave_otp` for a new one and ask the user for it.',
   },
 };
 

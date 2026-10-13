@@ -121,6 +121,10 @@ const CALL_HINTS: ApiErrorHints = {
     'validation error.token is expired.': 'The SMS code has expired (codes are valid for 3 minutes). Call '
       + '`request_sms_code` for a new one.',
     'Token Not Found': 'No SMS code is waiting for verification. Call `request_sms_code` first.',
+    'validation error.too many attempts.': 'Too many wrong SMS codes: this code is cancelled. Call '
+      + '`request_sms_code` for a new one and ask the user for it.',
+    REDIRECT_NOT_FOLLOWED: 'Teamso answered this endpoint with a redirect, which MCP does not follow. Use the Teamso '
+      + 'app for this action.',
     CREDIT_INSUFFICIENT: 'Your company does not have enough digital (SMS) credit for this action. The SMS code was '
       + 'used up, so a retry after topping up needs a new code (`request_sms_code`).',
   },
