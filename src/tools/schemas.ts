@@ -369,3 +369,151 @@ export const payslipPdfOutputSchema = {
   sizeBytes: z.number(),
   resourceUri: z.string(),
 };
+
+// ---------------------------------------------------------------- API catalog
+
+const sideEffectSchema = z.enum(['read', 'write', 'delete', 'read_with_writes']);
+const smsModeSchema = z.enum(['always', 'conditional', 'never']);
+const httpMethodSchema = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+
+export const apiEndpointSummarySchema = z.object({
+  id: z.string(),
+  method: httpMethodSchema,
+  path: z.string(),
+  module: z.string().optional(),
+  moduleTitle: z.string().optional(),
+  summary: z.string().optional(),
+  sideEffect: sideEffectSchema,
+  smsCodeRequired: smsModeSchema,
+  fileResponse: z.boolean(),
+  multipart: z.boolean(),
+  access: z.string().optional(),
+  conditional: z.boolean().optional(),
+});
+
+const apiSmsSchema = z.object({
+  mode: smsModeSchema,
+  when: z.string().optional(),
+  preVerify: z.boolean(),
+  credits: z.string().optional(),
+});
+
+export const apiEndpointListOutputSchema = {
+  query: z.string().optional(),
+  module: z.string().optional(),
+  method: httpMethodSchema.optional(),
+  sideEffect: sideEffectSchema.optional(),
+  page: z.number(),
+  size: z.number(),
+  total: z.number(),
+  totalPages: z.number(),
+  endpoints: z.array(apiEndpointSummarySchema),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const apiModulesOutputSchema = {
+  modules: z.array(z.object({
+    code: z.string(),
+    title: z.string(),
+    description: z.string().optional(),
+    endpointCount: z.number(),
+    allowedCount: z.number(),
+  })),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const apiEndpointDescriptionOutputSchema = {
+  endpoint: apiEndpointSummarySchema.extend({
+    accessReason: z.string().optional(),
+    permission: z.string().optional(),
+    moduleDescription: z.string().optional(),
+    responseKind: z.string().optional(),
+    doc: z.string().optional(),
+    webScreens: z.array(z.string()),
+  }),
+  sms: apiSmsSchema.nullable(),
+  parameters: z.array(z.object({
+    name: z.string(),
+    in: z.string(),
+    required: z.boolean(),
+    schema: z.record(z.string(), z.unknown()),
+  })),
+  requestBody: z.object({
+    required: z.boolean(),
+    validated: z.boolean().optional(),
+    contentType: z.string(),
+    schema: z.record(z.string(), z.unknown()),
+  }).nullable(),
+  notes: z.array(z.string()),
+  related: z.array(z.string()),
+  example: z.object({
+    tool: z.enum(['call_api_read', 'call_api_write']),
+    arguments: z.record(z.string(), z.unknown()),
+  }),
+  nextAction: nextActionSchema,
+};
+
+const apiTruncationSchema = z.object({
+  originalChars: z.number(),
+  arrayPath: z.string().optional(),
+  originalItems: z.number().optional(),
+  returnedItems: z.number().optional(),
+  hint: z.string(),
+});
+
+const apiFileSchema = z.object({
+  fileName: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number(),
+  resourceUri: z.string(),
+});
+
+const apiResponseFields = {
+  responseType: z.enum(['json', 'file']),
+  status: z.number(),
+  messageCode: z.string().optional(),
+  message: z.string().optional(),
+  result: z.unknown().optional(),
+  truncated: z.boolean(),
+  truncation: apiTruncationSchema.optional(),
+  resultPreview: z.string().optional(),
+  file: apiFileSchema.optional(),
+};
+
+const apiRequestSchema = z.object({
+  method: httpMethodSchema,
+  path: z.string(),
+});
+
+export const apiReadOutputSchema = {
+  endpoint: apiEndpointSummarySchema,
+  request: apiRequestSchema,
+  ...apiResponseFields,
+  warnings: z.array(z.string()),
+};
+
+export const apiWriteOutputSchema = {
+  mode: z.enum(['preview', 'executed']),
+  endpoint: apiEndpointSummarySchema,
+  request: apiRequestSchema,
+  summary: z.string(),
+  validation: z.object({
+    checked: z.boolean(),
+    valid: z.boolean(),
+    errors: z.array(z.string()),
+  }),
+  sms: apiSmsSchema.nullable(),
+  smsVerified: z.boolean().optional(),
+  body: z.unknown().optional(),
+  files: z.array(z.object({
+    field: z.string(),
+    filename: z.string(),
+    contentType: z.string(),
+    sizeBytes: z.number(),
+  })),
+  warnings: z.array(z.string()),
+  ...Object.fromEntries(Object.entries(apiResponseFields).map(([key, schema]) => [key, schema.optional()])) as {
+    [K in keyof typeof apiResponseFields]: z.ZodOptional<typeof apiResponseFields[K]>
+  },
+  nextAction: nextActionSchema.optional(),
+};

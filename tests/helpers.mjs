@@ -416,7 +416,8 @@ export function createMockApi(overrides = []) {
       url,
       query: Object.fromEntries(url.searchParams),
       headers: new Headers(init.headers),
-      body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined,
+      body: typeof init.body === 'string' ? parseBody(init.body) : undefined,
+      rawBody: init.body,
     };
     calls.push(call);
     const key = `${method} ${path}`;
@@ -426,6 +427,14 @@ export function createMockApi(overrides = []) {
     return response instanceof Response ? response : json(response);
   };
   return { fetch, calls };
+}
+
+function parseBody(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
 export function createTestClient(fetch, options = {}) {
@@ -438,9 +447,9 @@ const ajv = new Ajv2020({ strict: false, allErrors: true });
  * Connects an MCP client to a fresh server over an in-memory transport and
  * lists the tools first, so the SDK client validates every `structuredContent`.
  */
-export async function withMcp(overrides, callback, clientOptions = {}) {
+export async function withMcp(overrides, callback, clientOptions = {}, serverOptions = {}) {
   const api = createMockApi(overrides);
-  const server = createMcpServer(createTestClient(api.fetch, clientOptions));
+  const server = createMcpServer(createTestClient(api.fetch, clientOptions), serverOptions);
   const client = new Client({ name: 'test-client', version: '1.0.0' });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);

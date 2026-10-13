@@ -456,3 +456,139 @@ export interface HelpBundle {
 }
 
 export type HelpLanguage = 'tr' | 'en';
+
+// ------------------------------------------------------------- API catalog
+
+/**
+ * One row of `GET /mcp-catalog/endpoints` (and the head of `GET /mcp-catalog/endpoint`).
+ * Every field is optional: the catalog is read defensively.
+ */
+export interface TeamsoApiEndpointItem {
+  /** `"METHOD /path/{var}"`, e.g. `POST /leave`. */
+  id?: string;
+  method?: string;
+  path?: string;
+  module?: string | null;
+  moduleTitle?: string | null;
+  summary?: string | null;
+  /** `read` | `write` | `delete` | `read_with_writes`. */
+  sideEffect?: string;
+  /** `always` | `conditional` | `never` (older builds: boolean). */
+  smsCodeRequired?: string | boolean | null;
+  fileResponse?: boolean;
+  multipart?: boolean;
+  /** Raw `@PreAuthorize` expression. */
+  permission?: string | null;
+  /** `allowed` | `conditional` | `authenticated`. */
+  access?: string;
+  conditional?: boolean;
+}
+
+export interface TeamsoApiEndpointPage {
+  items?: TeamsoApiEndpointItem[];
+  page?: number;
+  size?: number;
+  total?: number;
+  totalPages?: number;
+}
+
+export interface TeamsoApiSmsCode {
+  /** `always` | `conditional`. */
+  mode?: string;
+  when?: string;
+  preVerify?: boolean;
+  /** `1` | `perPerson` | `perItem` | `none`. */
+  credits?: string;
+}
+
+export interface TeamsoApiParameter {
+  name?: string;
+  /** `path` | `query` | `header`. */
+  in?: string;
+  required?: boolean;
+  schema?: Record<string, unknown>;
+}
+
+export interface TeamsoApiRequestBody {
+  required?: boolean;
+  validated?: boolean;
+  contentType?: string;
+  schema?: Record<string, unknown>;
+}
+
+/** `GET /mcp-catalog/endpoint` result. */
+export interface TeamsoApiEndpointDescription extends TeamsoApiEndpointItem {
+  controller?: string;
+  handler?: string;
+  accessReason?: string | null;
+  moduleDescription?: string | null;
+  summarySource?: string;
+  doc?: string | null;
+  webScreens?: string[];
+  getSideEffectClass?: string | null;
+  responseKind?: string;
+  smsCode?: TeamsoApiSmsCode | null;
+  parameters?: TeamsoApiParameter[];
+  requestBody?: TeamsoApiRequestBody | null;
+  $defs?: Record<string, unknown>;
+  notes?: string[];
+  related?: string[];
+}
+
+/** `GET /mcp-catalog/modules` row. */
+export interface TeamsoApiModule {
+  code?: string;
+  title?: string | null;
+  description?: string | null;
+  endpointCount?: number;
+  allowedCount?: number;
+}
+
+export type ApiHttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+export type ApiQueryValue = string | number | boolean | Array<string | number | boolean>;
+
+export interface ApiUploadFile {
+  /** Multipart field name. */
+  field: string;
+  filename: string;
+  contentType: string;
+  data: Uint8Array;
+}
+
+export type ApiRequestBody =
+  | { kind: 'json'; value: unknown }
+  | { kind: 'text'; value: string; contentType: string }
+  | { kind: 'multipart'; fields: Record<string, string[]>; files: ApiUploadFile[] };
+
+/** A request to a catalog endpoint (`TeamsoClient.callApi`). */
+export interface ApiCallRequest {
+  method: ApiHttpMethod;
+  /** Resolved path below the API base URL, every segment already encoded (`/leave/abc`). */
+  path: string;
+  query?: Record<string, ApiQueryValue>;
+  body?: ApiRequestBody;
+  /** Send `X-Teamso-Mcp-Intent: read`: the API then refuses anything that writes. */
+  readIntent?: boolean;
+  /** Largest response body accepted, in bytes. */
+  maxResponseBytes?: number;
+}
+
+export type ApiCallResponse =
+  | {
+    kind: 'json';
+    status: number;
+    /** True when the body is a Teamso envelope (`{code, message, message_code, result}`). */
+    envelope: boolean;
+    messageCode?: string;
+    message?: string;
+    /** `result` of the envelope, or the whole body for plain JSON. */
+    result: unknown;
+  }
+  | {
+    kind: 'file';
+    status: number;
+    data: Uint8Array;
+    contentType: string;
+    fileName?: string;
+  };

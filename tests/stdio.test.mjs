@@ -61,8 +61,36 @@ test('the stdio binary answers initialize and tools/list', async () => {
   assert.equal(initialize.result.serverInfo.version, VERSION);
   assert.match(initialize.result.instructions, /request_leave_otp/);
   assert.equal(list.result.tools.length, TOOL_NAMES.length);
-  assert.equal(list.result.tools.length, 28);
+  assert.equal(list.result.tools.length, 34);
+  assert.match(initialize.result.instructions, /find_api_endpoints/);
   assert.match(stderr, /running on stdio \(api: https:\/\/api\.teamso\.com\/v1\)/);
+});
+
+const INIT = [
+  {
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'initialize',
+    params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'smoke', version: '1.0.0' } },
+  },
+  { jsonrpc: '2.0', method: 'notifications/initialized' },
+  { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} },
+];
+
+test('TEAMSO_TOOLSETS limits the tools the binary serves', async () => {
+  const { responses } = await runBin({ TEAMSO_ACCESS_TOKEN: 'tms_pat_dummy', TEAMSO_TOOLSETS: 'core, api' }, INIT, 2);
+  assert.deepEqual(responses[1].result.tools.map(tool => tool.name), [
+    'get_me',
+    'find_api_endpoints', 'list_api_modules', 'describe_api_endpoint', 'call_api_read', 'call_api_write',
+    'request_sms_code',
+  ]);
+});
+
+test('an unknown TEAMSO_TOOLSETS name stops the binary with the valid names', async () => {
+  const { code, stderr } = await runBin({ TEAMSO_ACCESS_TOKEN: 'tms_pat_dummy', TEAMSO_TOOLSETS: 'leave,paryoll' }, [], 0);
+  assert.equal(code, 1);
+  assert.match(stderr, /Unknown Teamso toolset\(s\): paryoll/);
+  assert.match(stderr, /core, help, leave, approvals, employees, performance, communication, payroll, api/);
 });
 
 test('the stdio binary refuses to start without a valid token', async () => {

@@ -1,9 +1,15 @@
 import crypto from 'node:crypto';
 import net from 'node:net';
 import type {
+  ApiCallRequest,
+  ApiCallResponse,
+  ApiQueryValue,
   HelpBundle,
   HelpLanguage,
   TeamsoAnnouncementFeed,
+  TeamsoApiEndpointDescription,
+  TeamsoApiEndpointPage,
+  TeamsoApiModule,
   TeamsoAuthorizedEmployee,
   TeamsoDayCalculation,
   TeamsoEnvelope,
@@ -45,6 +51,13 @@ export const CLIENT_HEADER = 'X-Teamso-Client';
 export const PROXY_CLIENT_IP_HEADER = 'X-Teamso-Proxy-Client-Ip';
 export const PROXY_TIMESTAMP_HEADER = 'X-Teamso-Proxy-Timestamp';
 export const PROXY_SIGNATURE_HEADER = 'X-Teamso-Proxy-Signature';
+/** With value `read`, the API lets the request reach only handlers that do not write (403 otherwise). */
+export const MCP_INTENT_HEADER = 'X-Teamso-Mcp-Intent';
+
+const CATALOG_PATH = '/mcp-catalog';
+const ENDPOINT_CACHE_TTL_MS = 60_000;
+const ENDPOINT_CACHE_MAX = 200;
+const DEFAULT_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
 
 /**
  * `message_code` values that mean failure even when the API answers HTTP 200
@@ -181,12 +194,32 @@ export class TeamsoApiError extends Error {
   }
 }
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
-type QueryValue = string | number | boolean | undefined | null;
+/** A response body larger than the caller accepts; nothing of it is returned. */
+export class TeamsoResponseTooLargeError extends Error {
+  readonly limitBytes: number;
+  /** Size announced by `Content-Length`, when known. */
+  readonly sizeBytes?: number;
+
+  constructor(limitBytes: number, sizeBytes?: number) {
+    super(`The Teamso response is larger than ${formatMegabytes(limitBytes)}`
+      + `${sizeBytes ? ` (${formatMegabytes(sizeBytes)})` : ''}.`);
+    this.name = 'TeamsoResponseTooLargeError';
+    this.limitBytes = limitBytes;
+    this.sizeBytes = sizeBytes;
+  }
+}
+
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+type QueryValue = ApiQueryValue | undefined | null;
 
 interface RequestOptions {
   query?: Record<string, QueryValue>;
+  /** JSON body. */
   body?: unknown;
+  /** Pre-encoded body (text or multipart); `contentType` is set unless the body is FormData. */
+  rawBody?: string | FormData;
+  contentType?: string;
+  headers?: Record<string, string>;
   signal?: AbortSignal;
   accept?: string;
 }
@@ -219,6 +252,7 @@ export class TeamsoClient {
   private readonly helpCacheTtlMs: number;
   private readonly now: () => number;
   private readonly helpCache: HelpCache;
+  private readonly endpointCache = new Map<string, { value: TeamsoApiEndpointDescription; expiresAt: number }>();
 
   constructor(accessToken: string, baseUrl?: string, options: TeamsoClientOptions = {}) {
     if (!accessToken) throw new Error('TEAMSO_ACCESS_TOKEN is required');
@@ -555,6 +589,127 @@ export class TeamsoClient {
     };
   }
 
+  // ------------------------------------------------------------ API catalog
+
+  /** Endpoints the caller may call (`GET /mcp-catalog/endpoints`); pages start at 1. */
+  async listApiEndpoints(
+    params: { q?: string; module?: string; method?: string; page?: number; size?: number; lang?: HelpLanguage } = {},
+    signal?: AbortSignal,
+  ): Promise<TeamsoApiEndpointPage> {
+    const page = await this.call<TeamsoApiEndpointPage>('GET', `${CATALOG_PATH}/endpoints`, {
+      query: {
+        q: params.q,
+        module: params.module,
+        method: params.method,
+        page: params.page,
+        size: params.size,
+        lang: params.lang,
+      },
+      signal,
+    });
+    return isRecord(page) ? page : {};
+  }
+
+  /**
+   * Full description of one endpoint the caller may call (`GET /mcp-catalog/endpoint`). Unknown,
+   * hidden and not-allowed ids are `ITEM_NOT_FOUND`. Descriptions are cached for a minute per client.
+   */
+  async getApiEndpoint(id: string, lang?: HelpLanguage, signal?: AbortSignal): Promise<TeamsoApiEndpointDescription> {
+    const key = `${lang ?? ''}\n${id}`;
+    const now = this.now();
+    const cached = this.endpointCache.get(key);
+    if (cached && now < cached.expiresAt) return cached.value;
+    const description = await this.call<TeamsoApiEndpointDescription>('GET', `${CATALOG_PATH}/endpoint`, {
+      query: { id, lang },
+      signal,
+    });
+    if (!isRecord(description)) {
+      throw new TeamsoApiError(200, 'ITEM_NOT_FOUND', 'The catalog returned no description', description);
+    }
+    if (this.endpointCache.size >= ENDPOINT_CACHE_MAX) {
+      const oldest = this.endpointCache.keys().next().value;
+      if (oldest !== undefined) this.endpointCache.delete(oldest);
+    }
+    this.endpointCache.set(key, { value: description, expiresAt: now + ENDPOINT_CACHE_TTL_MS });
+    return description;
+  }
+
+  /** Product modules with endpoint counts (`GET /mcp-catalog/modules`). */
+  async listApiModules(lang?: HelpLanguage, signal?: AbortSignal): Promise<TeamsoApiModule[]> {
+    return asArray(await this.call<TeamsoApiModule[]>('GET', `${CATALOG_PATH}/modules`, { query: { lang }, signal }));
+  }
+
+  /**
+   * Calls one catalog endpoint. JSON answers are unwrapped (Teamso failures, including HTTP 200
+   * failure codes, throw `TeamsoApiError`); anything else comes back as a file. Bodies larger than
+   * `maxResponseBytes` throw `TeamsoResponseTooLargeError` without being buffered.
+   */
+  async callApi(request: ApiCallRequest, signal?: AbortSignal): Promise<ApiCallResponse> {
+    assertApiPath(request.path);
+    const options: RequestOptions = {
+      query: request.query,
+      signal,
+      accept: 'application/json, */*;q=0.8',
+      headers: request.readIntent ? { [MCP_INTENT_HEADER]: 'read' } : undefined,
+    };
+    const body = request.body;
+    if (body?.kind === 'json') {
+      options.body = body.value;
+    } else if (body?.kind === 'text') {
+      options.rawBody = body.value;
+      options.contentType = body.contentType;
+    } else if (body?.kind === 'multipart') {
+      const form = new FormData();
+      for (const [name, values] of Object.entries(body.fields)) {
+        for (const value of values) form.append(name, value);
+      }
+      for (const file of body.files) {
+        form.append(file.field, new Blob([file.data], { type: file.contentType }), file.filename);
+      }
+      options.rawBody = form;
+    }
+
+    const response = await this.send(request.method, request.path, options);
+    const contentType = response.headers.get('content-type') ?? '';
+    const data = await readLimited(response, request.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES);
+    const isJson = /json/i.test(contentType) || (contentType === '' && looksLikeJson(data));
+
+    if (!response.ok) {
+      const text = new TextDecoder().decode(data);
+      throw errorFromResponse(response.status, parseJson(text), text);
+    }
+    if (!isJson) {
+      return {
+        kind: 'file',
+        status: response.status,
+        data,
+        contentType: contentType.split(';')[0]!.trim() || 'application/octet-stream',
+        fileName: fileNameFromDisposition(response.headers.get('content-disposition')),
+      };
+    }
+
+    const text = new TextDecoder().decode(data);
+    const parsed = parseJson(text);
+    if (text.trim() !== '' && parsed === undefined) {
+      throw new TeamsoApiError(response.status, undefined, 'The API returned a response that is not valid JSON', text.slice(0, 300));
+    }
+    if (isRecord(parsed) && (typeof parsed.message_code === 'string' || typeof parsed.code === 'number')) {
+      const envelope = parsed as TeamsoEnvelope;
+      if (envelope.code === 0 || isFailureMessageCode(envelope.message_code)) {
+        throw envelopeError(response.status, envelope);
+      }
+      return {
+        kind: 'json',
+        status: response.status,
+        envelope: true,
+        messageCode: stringOrUndefined(envelope.message_code),
+        message: stringOrUndefined(envelope.message),
+        result: envelope.result,
+      };
+    }
+    return { kind: 'json', status: response.status, envelope: false, result: parsed };
+  }
+
   // ------------------------------------------------------------------- help
 
   /**
@@ -632,15 +787,21 @@ export class TeamsoClient {
     const url = new URL(`${this.baseUrl}${path}`);
     for (const [key, value] of Object.entries(options.query ?? {})) {
       if (value === undefined || value === null || value === '') continue;
-      url.searchParams.set(key, String(value));
+      if (Array.isArray(value)) {
+        for (const item of value) url.searchParams.append(key, String(item));
+      } else {
+        url.searchParams.set(key, String(value));
+      }
     }
 
     const headers: Record<string, string> = {
+      ...options.headers,
       Authorization: `Bearer ${this.#accessToken}`,
       Accept: options.accept ?? 'application/json',
       [CLIENT_HEADER]: `teamso-mcp/${VERSION}`,
     };
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+    else if (typeof options.rawBody === 'string') headers['Content-Type'] = options.contentType ?? 'text/plain';
 
     const proxy = this.#trustedProxy;
     if (proxy) {
@@ -661,7 +822,7 @@ export class TeamsoClient {
       return await this.fetchImpl(url, {
         method,
         headers,
-        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        body: options.body === undefined ? options.rawBody : JSON.stringify(options.body),
         signal: withTimeout(options.signal, this.timeoutMs),
       });
     } catch (error) {
@@ -756,6 +917,57 @@ export function pathSafeText(value: string): string {
 /** Encodes one path segment; `:` stays literal like browsers send it (`2026-11-02%2009:00`). */
 function segment(value: string): string {
   return encodeURIComponent(value).replace(/%3A/gi, ':');
+}
+
+/**
+ * Generic calls only go to resolved catalog paths: absolute, no query or fragment, no empty or dot
+ * segments, so a crafted path can never leave the API base URL or reach another route.
+ */
+function assertApiPath(path: string): void {
+  if (!path.startsWith('/') || /[?#\\\s]/.test(path)) throw new Error(`Refusing to call an invalid API path: ${path}`);
+  const segments = path.slice(1).split('/');
+  if (segments.some(part => part === '' || /^(\.|%2e)+$/i.test(part))) {
+    throw new Error(`Refusing to call an invalid API path: ${path}`);
+  }
+}
+
+/** Reads the body up to `limit` bytes; stops the download and throws as soon as it is exceeded. */
+async function readLimited(response: Response, limit: number): Promise<Uint8Array> {
+  const announced = Number(response.headers.get('content-length'));
+  if (Number.isFinite(announced) && announced > limit) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new TeamsoResponseTooLargeError(limit, announced);
+  }
+  if (!response.body) return new Uint8Array(await response.arrayBuffer());
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      await reader.cancel().catch(() => undefined);
+      throw new TeamsoResponseTooLargeError(limit);
+    }
+    chunks.push(value);
+  }
+  const data = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    data.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return data;
+}
+
+function looksLikeJson(data: Uint8Array): boolean {
+  const head = new TextDecoder().decode(data.subarray(0, 64)).trimStart();
+  return head.startsWith('{') || head.startsWith('[');
+}
+
+function formatMegabytes(bytes: number): string {
+  return `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`;
 }
 
 function trimTrailingSlashes(value: string): string {

@@ -2,7 +2,7 @@
 
 # Teamso MCP Server
 
-**Official [MCP](https://modelcontextprotocol.io/) server for [Teamso](https://teamso.com/)** — request leave, handle approvals, find colleagues, manage performance goals, read payslips and search the Teamso help center from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant.
+**Official [MCP](https://modelcontextprotocol.io/) server for [Teamso](https://teamso.com/)** — request leave, handle approvals, find colleagues, manage performance goals, read payslips, search the Teamso help center and reach every other Teamso module through permission-checked generic API tools, from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant.
 
 [![npm](https://img.shields.io/badge/npm-@teamso/teamso--mcp-1a56db?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/package/@teamso/teamso-mcp)
 [![MCP](https://img.shields.io/badge/MCP-compatible-333?style=for-the-badge)](https://modelcontextprotocol.io/)
@@ -133,6 +133,9 @@ the web app fails with a clear permission message here too.
   assistant. Each SMS uses company digital credit.
 - Token management, password, security settings and API key endpoints cannot
   be called with a personal access token.
+- The generic API tools only list and call the endpoints the token owner's own
+  Teamso permissions allow: a user without the leave-add permission cannot add
+  leave through MCP either.
 
 ```
 TEAMSO_ACCESS_TOKEN=tms_pat_your-token
@@ -208,6 +211,17 @@ TEAMSO_ACCESS_TOKEN=tms_pat_your-token
 | `list_my_payslips` | Your e-payslips by term with status |
 | `get_payslip_pdf` | One payslip as an embedded `application/pdf` resource |
 
+### Whole system: generic API tools
+
+| Tool | Description |
+|------|-------------|
+| `list_api_modules` | Teamso modules with how many API endpoints you can call in each |
+| `find_api_endpoints` | Search the endpoints you may call by keywords, module, HTTP method or side effect |
+| `describe_api_endpoint` | Parameters, body JSON Schema, response kind, SMS-code and side-effect notes, example arguments |
+| `call_api_read` | Run a read-only endpoint; returns JSON (long lists are cut with `truncated: true`) or a file |
+| `call_api_write` | Preview, then (with `confirm: true`) run an endpoint that creates, changes or deletes data |
+| `request_sms_code` | Send the SMS code an endpoint needs (`request_leave_otp` is the leave-specific alias) |
+
 Leave chain:
 `list_leave_types → calculate_leave_days → request_leave_otp → create_leave_request`
 
@@ -216,6 +230,83 @@ Approval chain:
 
 Goal chain:
 `list_performance_periods → list_my_goals → create_user_goal → send_goals_to_approval`
+
+Everything else (expenses, overtime, time tracking, payroll, recruiting,
+inventory, documents, settings...):
+`find_api_endpoints → describe_api_endpoint → call_api_read` or
+`call_api_write (preview) → user confirms → call_api_write confirm: true`
+
+## Whole system: generic API tools
+
+The specific tools above cover the most common tasks. Every other Teamso
+module is reachable through six generic tools built on the Teamso API's
+per-user catalog (`GET /mcp-catalog/endpoints`, `/endpoint`, `/modules`):
+
+- **Only what you may use.** The catalog evaluates each endpoint's permission
+  rule for the token owner, so `find_api_endpoints` lists only endpoints the
+  user may call, and `describe_api_endpoint` / `call_api_*` refuse every id the
+  catalog does not list for that user. There are no free-form URLs: a call is
+  always an endpoint id (`"POST /expense-form"`) plus `path_params`, `query`
+  and `body`, and the real request still passes Teamso's own permission checks.
+  Login, password, token, security-setting, payment and SMS endpoints are never
+  listed.
+- **Reads are read-only.** `call_api_read` only runs endpoints whose
+  `sideEffect` is `read` and sends `X-Teamso-Mcp-Intent: read`, with which the
+  API refuses anything that would write (403). `GET` endpoints that do change
+  data (`read_with_writes`) must go through `call_api_write`.
+- **Writes preview first.** `call_api_write` without `confirm` sends nothing:
+  it returns the resolved request, the body checked against the endpoint's JSON
+  Schema (ajv, 2020-12; errors listed), delete and SMS warnings and a one-line
+  summary. The assistant shows it to the user and repeats the call with
+  `confirm: true` only after the user agrees. Invalid requests are never sent.
+- **SMS codes.** Endpoints with `smsCodeRequired: always` (or `preVerify`) need
+  `otp_code` (`request_sms_code` sends it; the code is verified immediately
+  before the call). `conditional` endpoints are called first; when Teamso
+  answers `OTP_NOT_DONE` the given `otp_code` is verified and the call retried
+  once, otherwise the tool asks for `request_sms_code`.
+- **Files.** File responses (PDF, Excel, CSV, images) come back as an embedded
+  resource with `mimeType` and file name, up to 8 MB; larger files fail with a
+  clear message. Multipart endpoints take `files: [{field, filename,
+  content_type, base64}]`, up to 10 files and 10 MB in total.
+- **Large results.** JSON results above 40,000 characters are cut to the
+  items that fit, with `truncated: true` and a `truncation` object (original
+  and returned item counts, how to page). Results are never cut silently.
+- **Errors.** Teamso failures, including HTTP 200 responses with a failure
+  `message_code`, come back as `isError` results naming the `message_code`.
+
+```text
+find_api_endpoints { "query": "masraf", "side_effect": "write" }
+describe_api_endpoint { "id": "POST /expense-form/{expenseFormId}/finalize" }
+call_api_write { "id": "POST /expense-form/{expenseFormId}/finalize", "path_params": { "expenseFormId": "…" } }   → preview
+request_sms_code {}                                                                                                 → user reads the code
+call_api_write { …same arguments…, "confirm": true, "otp_code": "123456" }                                          → runs it
+```
+
+### Toolsets
+
+`TEAMSO_TOOLSETS` (or the `toolsets` option of `createMcpServer`) limits the
+tools a server offers, as a comma-separated list. Default: all tools.
+
+| Toolset | Tools |
+|---------|-------|
+| `core` | `get_me` |
+| `help` | `search_help_articles`, `get_help_article`, `list_help_modules` |
+| `leave` | `list_leave_types`, `get_my_leave_balance`, `calculate_leave_days`, `request_leave_otp`, `create_leave_request`, `list_my_leaves`, `cancel_leave_request` |
+| `approvals` | `list_pending_approvals`, `approve_or_reject_leave` |
+| `employees` | `search_employees`, `get_employee_profile` |
+| `performance` | the ten goal and evaluation tools |
+| `communication` | `list_announcements` |
+| `payroll` | `list_my_payslips`, `get_payslip_pdf` |
+| `api` | `find_api_endpoints`, `list_api_modules`, `describe_api_endpoint`, `call_api_read`, `call_api_write`, `request_sms_code` |
+
+An unknown toolset name stops the server with the list of valid names.
+
+```json
+"env": {
+  "TEAMSO_ACCESS_TOKEN": "tms_pat_...",
+  "TEAMSO_TOOLSETS": "core,leave,approvals,api"
+}
+```
 
 ## Prompts
 
@@ -324,11 +415,14 @@ const client = new TeamsoClient(userToken, 'https://api.teamso.com/v1', {
 
 | Export | Description |
 |--------|-------------|
-| `createMcpServer(client, options?)` | Creates an McpServer with all 28 tools and both prompts registered; `options` sets `name`, `version`, `instructions` |
+| `createMcpServer(client, options?)` | Creates an McpServer with all 34 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
 | `TeamsoClient` | Teamso REST client (personal access token, envelope handling, optional trusted-proxy signing) |
 | `TeamsoApiError` | Error with `status`, `messageCode`, `apiMessage` and the response `body` |
-| `registerTools(server, client)` | Register the tools on an existing McpServer |
+| `registerTools(server, client, options?)` | Register the tools (optionally only some `toolsets`) on an existing McpServer |
 | `TOOL_NAMES` | Names of the tools this package serves, for routing other names elsewhere |
+| `TOOLSETS`, `TOOLSET_NAMES`, `resolveToolsets(selection)` | Tool groups for `TEAMSO_TOOLSETS` and the tools a selection serves |
+| `MCP_INTENT_HEADER` | `X-Teamso-Mcp-Intent`; with value `read` the API refuses requests that would write |
+| `TeamsoResponseTooLargeError` | Thrown by `TeamsoClient.callApi` when a response exceeds its size limit |
 | `registerPrompts(server)` | Register the prompts on an existing McpServer |
 | `PROMPT_NAMES` | Names of the prompts this package serves (`request_leave`, `review_pending_approvals`) |
 | `withJsonSchema2020_12(transport)` | Rewrites `tools/list` schemas to JSON Schema 2020-12 on any transport |
@@ -350,6 +444,7 @@ import { registerPrompts, PROMPT_NAMES } from '@teamso/teamso-mcp/prompts';
 | `TEAMSO_API_BASE_URL` | No | Override the API base URL (default: `https://api.teamso.com/v1`) |
 | `TEAMSO_HELP_BASE_URL` | No | Site the help articles are downloaded from (default: `https://teamso.com`) |
 | `TEAMSO_HELP_PUBLIC_URL` | No | Public site used for help links and images in tool output (default: `TEAMSO_HELP_BASE_URL`). Set it when the download address is internal |
+| `TEAMSO_TOOLSETS` | No | Comma-separated toolsets to serve: `core`, `help`, `leave`, `approvals`, `employees`, `performance`, `communication`, `payroll`, `api` (default: all) |
 
 ## Self-hosting from source
 

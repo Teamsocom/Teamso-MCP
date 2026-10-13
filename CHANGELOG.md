@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.2.0
+
+### Added
+
+- Generic API tools that make every Teamso module usable through MCP, always with the token owner's own
+  Teamso permissions. They are built on the API's per-user catalog (`/mcp-catalog`), which lists only the
+  endpoints the caller may call:
+  - `find_api_endpoints` (keywords, module, HTTP method, side effect, paging), `list_api_modules` and
+    `describe_api_endpoint` (parameters, body JSON Schema, response kind, SMS-code and side-effect notes,
+    example arguments).
+  - `call_api_read`: runs only `read` endpoints and sends `X-Teamso-Mcp-Intent: read`, so the API refuses
+    anything that writes. JSON results over 40,000 characters are cut with `truncated: true` and paging
+    hints; files come back as embedded resources (up to 8 MB).
+  - `call_api_write`: returns a preview (resolved request, body validated against the endpoint's JSON Schema
+    with ajv 2020-12, delete/SMS warnings, one-line summary) and runs only with `confirm: true`. Handles the
+    SMS-code flow (`always`, `conditional`, `preVerify`), plain-text bodies and multipart uploads
+    (`files`, base64, 10 MB in total). Ids the catalog does not list for the caller are refused; there are
+    no free-form URLs.
+  - `request_sms_code`: the generic SMS-code tool (`request_leave_otp` stays as the leave alias).
+- Toolsets: `TEAMSO_TOOLSETS` / the `toolsets` option of `createMcpServer` and `registerTools`
+  (`core`, `help`, `leave`, `approvals`, `employees`, `performance`, `communication`, `payroll`, `api`;
+  default all). New exports `TOOLSETS`, `TOOLSET_NAMES`, `resolveToolsets`. `TOOL_NAMES` keeps every
+  earlier name in the same order; the six new tools are appended.
+- `TeamsoClient`: `listApiEndpoints`, `getApiEndpoint` (cached for a minute), `listApiModules` and
+  `callApi`; `MCP_INTENT_HEADER` and `TeamsoResponseTooLargeError` exports.
+- Server instructions explain when to use the generic tools, the preview-then-confirm rule, SMS codes and
+  files.
+
+### Changed
+
+- `ajv` is now a runtime dependency (request body validation).
+
 ## 1.1.3
 
 ### Fixed

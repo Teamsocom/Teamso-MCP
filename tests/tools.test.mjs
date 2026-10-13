@@ -28,6 +28,8 @@ const EXPECTED_TOOLS = [
   'update_manager_actual_value', 'approve_goal_evaluation',
   'list_announcements',
   'list_my_payslips', 'get_payslip_pdf',
+  'find_api_endpoints', 'list_api_modules', 'describe_api_endpoint', 'call_api_read', 'call_api_write',
+  'request_sms_code',
 ];
 
 // ------------------------------------------------------------------ catalog
@@ -54,6 +56,12 @@ test('tools/list exposes exactly TOOL_NAMES with schemas and annotations', async
     const destructive = tools.filter(tool => tool.annotations.destructiveHint).map(tool => tool.name);
     assert.ok(destructive.includes('cancel_leave_request'));
     assert.ok(destructive.includes('approve_or_reject_leave'));
+    assert.ok(destructive.includes('call_api_write'));
+    for (const name of ['find_api_endpoints', 'list_api_modules', 'describe_api_endpoint', 'call_api_read']) {
+      assert.ok(readOnly.includes(name), `${name} is read-only`);
+    }
+    const write = tools.find(tool => tool.name === 'call_api_write');
+    assert.equal(write.annotations.idempotentHint, false);
   });
 });
 

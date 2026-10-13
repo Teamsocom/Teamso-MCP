@@ -8,6 +8,7 @@ const accessToken = process.env['TEAMSO_ACCESS_TOKEN']?.trim();
 const baseUrl = process.env['TEAMSO_API_BASE_URL']?.trim() || undefined;
 const helpBaseUrl = process.env['TEAMSO_HELP_BASE_URL']?.trim() || undefined;
 const helpPublicUrl = process.env['TEAMSO_HELP_PUBLIC_URL']?.trim() || undefined;
+const toolsets = process.env['TEAMSO_TOOLSETS']?.trim() || undefined;
 
 if (!accessToken) {
   console.error(
@@ -22,14 +23,15 @@ if (!accessToken) {
 }
 
 let client: TeamsoClient;
+let server: ReturnType<typeof createMcpServer>;
 try {
   client = new TeamsoClient(accessToken, baseUrl, { helpBaseUrl, helpPublicUrl });
+  server = createMcpServer(client, { toolsets });
 } catch (error) {
   console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 }
 
-const server = createMcpServer(client);
 const transport = new StdioServerTransport();
 
 await server.connect(transport);
