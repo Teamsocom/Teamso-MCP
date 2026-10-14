@@ -1019,3 +1019,17 @@ test('an SMS code cancelled after too many wrong attempts asks for a new code', 
     assert.equal(callsTo(calls, 'PUT', '/user-document').length, 0);
   });
 });
+
+test('a code from an older SMS asks for the code in the latest SMS', async () => {
+  await withApi([
+    [`GET /sms/checkToken/${'654321'}`, () => hardFailure('validation error.a newer code was sent.', 'ITEM_NOT_FOUND')],
+  ], async ({ call, calls }) => {
+    const result = await call('call_api_write', {
+      id: 'PUT /user-document/approve/{userDocumentId}', path_params: { userDocumentId: 'ud-1' }, confirm: true, otp_code: '654321',
+    });
+    assert.equal(result.isError, true);
+    assert.match(textOf(result), /code in the latest SMS/);
+    assert.doesNotMatch(textOf(result), /could not find that record/);
+    assert.equal(callsTo(calls, 'PUT', '/user-document').length, 0);
+  });
+});
