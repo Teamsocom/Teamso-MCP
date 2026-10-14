@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1
+
+### Changed
+
+- README for the npm package page: Teamso logo, library install from npm instead of GitHub, the
+  generic-tools section renamed to "Reaching every module" (it repeated a heading), and the release
+  steps moved to `CONTRIBUTING.md`. No code changes.
+
 ## 1.2.0
 
 ### Added
