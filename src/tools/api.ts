@@ -123,6 +123,8 @@ const CALL_HINTS: ApiErrorHints = {
     'Token Not Found': 'No SMS code is waiting for verification. Call `request_sms_code` first.',
     'validation error.too many attempts.': 'Too many wrong SMS codes: this code is cancelled. Call '
       + '`request_sms_code` for a new one and ask the user for it.',
+    'validation error.a newer code was sent.': 'That code is from an older SMS; a newer code was sent since. Ask the '
+      + 'user for the code in the latest SMS.',
     REDIRECT_NOT_FOLLOWED: 'Teamso answered this endpoint with a redirect, which MCP does not follow. Use the Teamso '
       + 'app for this action.',
     CREDIT_INSUFFICIENT: 'Your company does not have enough digital (SMS) credit for this action. The SMS code was '
