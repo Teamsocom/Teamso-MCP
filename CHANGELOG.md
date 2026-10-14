@@ -2,11 +2,18 @@
 
 ## 1.2.1
 
+### Fixed
+
+- When the user types the code of an older SMS, Teamso answers `a newer code was sent`. The leave and
+  generic API tools now tell the assistant to ask for the code in the latest SMS, instead of treating
+  it as a not-found error and pointing at `path_params`.
+
 ### Changed
 
 - README for the npm package page: Teamso logo, library install from npm instead of GitHub, the
   generic-tools section renamed to "Reaching every module" (it repeated a heading), and the release
-  steps moved to `CONTRIBUTING.md`. No code changes.
+  steps moved to `CONTRIBUTING.md`.
+- CI uses `actions/checkout` and `actions/setup-node` v7.
 
 ## 1.2.0
 
