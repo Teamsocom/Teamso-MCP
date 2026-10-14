@@ -7,7 +7,7 @@ open issues, comment and send pull requests, and a Teamso maintainer reviews and
 
 - Check the [open issues](https://github.com/Teamsocom/Teamso-MCP/issues) first. For a larger change,
   open an issue to agree on the approach before you write code.
-- Security problems: do **not** open a public issue — see [SECURITY.md](SECURITY.md).
+- Security problems: do **not** open a public issue; see [SECURITY.md](SECURITY.md).
 
 ## Development
 
@@ -37,5 +37,18 @@ npm test
    the workflow run for first-time and external contributors.
 4. Pull requests are squash-merged after review and green CI. Releases (tags `v*` and the npm package)
    are made by maintainers only.
+
+## Releasing (maintainers)
+
+1. Bump `version` in `package.json`, add a `CHANGELOG.md` entry and merge it to `main`.
+2. Tag `v<version>` and create a GitHub release from it: `.github/workflows/publish.yml` type-checks,
+   tests, builds and runs `npm publish --provenance --access public`. An existing tag can be published
+   by hand with `gh workflow run publish.yml -f tag=v<version>`.
+3. The package belongs to the `teamso` npm account (two-factor authentication is on). The workflow
+   authenticates with npm trusted publishing (OIDC), configured for this repository and `publish.yml`
+   on the package settings at npmjs.com. Without it, publish locally as that account:
+   `npm login`, then `npm publish --access public` and approve with the account's passkey.
+4. npm may hold a new version for review before it goes live (a placeholder `0.0.0-stage` shows
+   meanwhile); check "Staged Packages" in the account settings.
 
 By contributing you agree that your contribution is licensed under the [MIT License](LICENSE).

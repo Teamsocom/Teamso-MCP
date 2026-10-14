@@ -1,8 +1,10 @@
 <div align="center">
 
+<img src="https://teamso.com/logo/teamso-logo.png" alt="Teamso" width="220" />
+
 # Teamso MCP Server
 
-**Official [MCP](https://modelcontextprotocol.io/) server for [Teamso](https://teamso.com/)** — request leave, handle approvals, find colleagues, manage performance goals, read payslips, search the Teamso help center and reach every other Teamso module through permission-checked generic API tools, from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant.
+**Official [MCP](https://modelcontextprotocol.io/) server for [Teamso](https://teamso.com/)**: request leave, handle approvals, find colleagues, manage performance goals, read payslips, search the Teamso help center and reach every other Teamso module through permission-checked generic API tools, from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant.
 
 [![npm](https://img.shields.io/badge/npm-@teamso/teamso--mcp-1a56db?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/package/@teamso/teamso-mcp)
 [![MCP](https://img.shields.io/badge/MCP-compatible-333?style=for-the-badge)](https://modelcontextprotocol.io/)
@@ -25,7 +27,7 @@ The token starts with `tms_pat_` and is shown only once.
 
 ### 2. Add to Your AI Assistant
 
-**Cursor** — open MCP settings (`Cmd+Shift+P` → "Open MCP settings") and add:
+**Cursor**: open MCP settings (`Cmd+Shift+P` → "Open MCP settings") and add:
 
 ```json
 {
@@ -54,7 +56,7 @@ claude mcp add --transport http teamso https://mcp.teamso.com/v1 \
   --header "Authorization: Bearer tms_pat_your-token"
 ```
 
-**Claude Desktop** — add to `claude_desktop_config.json`:
+**Claude Desktop**: add to `claude_desktop_config.json`:
 
 ```json
 {
@@ -71,7 +73,7 @@ claude mcp add --transport http teamso https://mcp.teamso.com/v1 \
 }
 ```
 
-**Windsurf** — add to `~/.codeium/windsurf/mcp_config.json`:
+**Windsurf**: add to `~/.codeium/windsurf/mcp_config.json`:
 
 ```json
 {
@@ -87,7 +89,7 @@ claude mcp add --transport http teamso https://mcp.teamso.com/v1 \
 }
 ```
 
-**Other clients** — any client that supports Streamable HTTP can use the hosted
+**Other clients**: any client that supports Streamable HTTP can use the hosted
 server with a bearer header:
 
 ```json
@@ -211,7 +213,7 @@ TEAMSO_ACCESS_TOKEN=tms_pat_your-token
 | `list_my_payslips` | Your e-payslips by term with status |
 | `get_payslip_pdf` | One payslip as an embedded `application/pdf` resource |
 
-### Whole system: generic API tools
+### Generic API tools
 
 | Tool | Description |
 |------|-------------|
@@ -236,7 +238,7 @@ inventory, documents, settings...):
 `find_api_endpoints → describe_api_endpoint → call_api_read` or
 `call_api_write (preview) → user confirms → call_api_write confirm: true`
 
-## Whole system: generic API tools
+## Reaching every module
 
 The specific tools above cover the most common tasks. Every other Teamso
 module is reachable through six generic tools built on the Teamso API's
@@ -318,7 +320,7 @@ needs the user's confirmation and, for leave requests, the SMS code.
 | Prompt | Arguments | Description |
 |--------|-----------|-------------|
 | `request_leave` | `start`, `end`, `leave_type`, `note` (all optional) | Create a leave request: `list_leave_types → calculate_leave_days →` confirm with the user `→ request_leave_otp → create_leave_request`. Missing dates are asked for; `end` defaults to `start`, `leave_type` to annual leave |
-| `review_pending_approvals` | — | Go through the leave requests waiting for your approval: `list_pending_approvals →` ask the user about each request `→ approve_or_reject_leave` |
+| `review_pending_approvals` | none | Go through the leave requests waiting for your approval: `list_pending_approvals →` ask the user about each request `→ approve_or_reject_leave` |
 
 Relative dates such as *"tomorrow"* / *"yarın"* are resolved in Turkey time
 (`Europe/Istanbul`).
@@ -384,10 +386,10 @@ instructions.
 
 ## Documentation
 
-- [MCP Server (Hosted)](https://teamso.com/docs/teamso-mcp-server) — setup guides for Cursor, Claude Code, Claude Desktop, Windsurf and other clients
-- [Self-Hosted MCP](https://teamso.com/docs/mcp-self-hosted) — run locally with npx, environment variables, library usage
-- [Access Tokens](https://teamso.com/dashboard/mcp-access) — create and revoke personal access tokens
-- [Help Center](https://help.teamso.com/) — the user guides behind the help tools
+- [MCP Server (Hosted)](https://teamso.com/docs/teamso-mcp-server): setup guides for Cursor, Claude Code, Claude Desktop, Windsurf and other clients
+- [Self-Hosted MCP](https://teamso.com/docs/mcp-self-hosted): run locally with npx, environment variables, library usage
+- [Access Tokens](https://teamso.com/dashboard/mcp-access): create and revoke personal access tokens
+- [Help Center](https://help.teamso.com/): the user guides behind the help tools
 
 ## Using as a Library
 
@@ -472,21 +474,9 @@ Point your client at the build instead of `npx`:
 }
 ```
 
-The package builds itself on install (`prepare`), so it can also be installed
-straight from GitHub: `npm install github:Teamsocom/Teamso-MCP#v1.1.3`.
+To use it as a library instead, install it from npm: `npm install @teamso/teamso-mcp`.
 
 Run the tests (mocked API, no network) with `npm test`.
-
-## Releasing
-
-1. Bump `version` in `package.json`, add a `CHANGELOG.md` entry, commit and push.
-2. Tag `v<version>` and create a GitHub release from it: `.github/workflows/publish.yml` type-checks,
-   tests, builds and runs `npm publish --provenance --access public`.
-3. An existing tag can be published by hand: `gh workflow run publish.yml -f tag=v1.1.3`.
-
-Authentication is npm trusted publishing (OIDC) once it is configured for `@teamso/teamso-mcp` on
-npmjs.com; until then the `NPM_TOKEN` repository secret (an automation token of the `@teamso` npm
-organization) is used.
 
 ## Links
 
@@ -504,13 +494,13 @@ privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT — see [LICENSE](./LICENSE) for details.
+MIT. See [LICENSE](./LICENSE) for details.
 
 ---
 
 <div align="center">
 
-**Built by the Teamso team**
+**Built with ❤️ by the Teamso team**
 
 [teamso.com](https://teamso.com) · [GitHub @Teamsocom](https://github.com/Teamsocom)
 
