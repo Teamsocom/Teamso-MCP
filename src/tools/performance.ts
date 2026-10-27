@@ -132,7 +132,7 @@ export function registerListMyGoals(server: McpServer, client: TeamsoClient): vo
 
         const goals = pages.goals.map(toGoal);
         const pending = goals.filter(goal => goal.status === 'PENDING');
-        return toolResult(goalListText(`My goals — ${title}`, goals, pages.canAddGoal), {
+        return toolResult(goalListText(`My goals: ${title}`, goals, pages.canAddGoal), {
           period: title,
           canAddGoal: pages.canAddGoal,
           goals,
@@ -184,7 +184,7 @@ export function registerListTeamGoals(server: McpServer, client: TeamsoClient): 
 
         const goals = pages.goals.map(toGoal);
         const awaiting = goals.find(goal => goal.canApproveGoal);
-        return toolResult(goalListText(`Team goals — ${title}`, goals, pages.canAddGoal, true), {
+        return toolResult(goalListText(`Team goals: ${title}`, goals, pages.canAddGoal, true), {
           period: title,
           canAddGoal: pages.canAddGoal,
           goals,
@@ -493,7 +493,7 @@ export function registerApproveGoalEvaluation(server: McpServer, client: TeamsoC
         const message = finalScore !== undefined
           ? `Evaluation approved. Final score: ${finalScore}${finalScoreText ? ` (${finalScoreText})` : ''}.`
           : `Evaluation approved${result.newStatus ? `; goals are now ${result.newStatus}` : ''}.`;
-        return toolResult(`## Evaluation approved — ${title}\n\n${goals.map(goalLine).join('\n')}\n\n${message}`, {
+        return toolResult(`## Evaluation approved: ${title}\n\n${goals.map(goalLine).join('\n')}\n\n${message}`, {
           period: title,
           userId: user_id,
           ...(result.newStatus ? { newStatus: result.newStatus } : {}),

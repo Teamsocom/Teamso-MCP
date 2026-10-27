@@ -233,6 +233,13 @@ test('give_badge checks the message and the peer rule before calling, and refuse
     assert.equal(noMessage.isError, true);
     assert.equal(callsTo(calls, 'POST', '/badge-award').length, 0);
   });
+  const twins = [['GET /badge-award/awardable', () => awardable({ badges: [TEAM_PLAYER, { ...TEAM_PLAYER, id: 'b-team-2' }] })]];
+  await withMcp([...twins, ...ROUTES], async ({ call, calls }) => {
+    const ambiguous = await call('give_badge', { badge: 'takim oyuncusu', recipient_ids: ['u-2'], message: 'Harika bir iş çıkardın' });
+    assert.equal(ambiguous.isError, true);
+    assert.match(textOf(ambiguous), /More than one badge you can give is called "takim oyuncusu" \(`b-team`, `b-team-2`\)/);
+    assert.equal(callsTo(calls, 'POST', '/badge-award').length, 0);
+  });
 });
 
 test('give_badge explains the API refusals (team, quota, module off)', async () => {

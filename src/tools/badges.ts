@@ -142,6 +142,11 @@ function resolveBadge(badges: TeamsoBadgeOption[], wanted: string): TeamsoBadgeO
   const key = normalizeSearchText(wanted);
   const byName = badges.filter(badge => normalizeSearchText(badge.name) === key);
   if (byName.length === 1) return byName[0];
+  if (byName.length > 1) {
+    const ids = byName.map(badge => `\`${badge.id}\``).join(', ');
+    throw new ToolInputError(`More than one badge you can give is called "${wanted}" (${ids}). Give it again with the badge id; `
+      + '`list_badges` shows which is which.');
+  }
   const names = badges.map(badge => `"${badge.name}"`).join(', ');
   throw new ToolInputError(badges.length
     ? `You cannot give a badge called "${wanted}". Badges you can give: ${names}. Use \`list_badges\` for their ids.`

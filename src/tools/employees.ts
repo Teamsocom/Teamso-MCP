@@ -116,13 +116,13 @@ export function registerGetEmployeeProfile(server: McpServer, client: TeamsoClie
         const lines = [
           `## ${employee.fullName}`,
           '',
-          `- **Position:** ${employee.position ?? '—'}`,
-          `- **Department:** ${employee.department ?? '—'}`,
-          `- **Branch:** ${employee.branch ?? '—'}`,
-          `- **Manager:** ${employee.manager?.fullName ?? '—'}`,
-          `- **Email:** ${employee.email ?? '—'}`,
-          `- **Phone:** ${employee.phone ?? '—'}`,
-          `- **Work location:** ${employee.workplace ?? employee.workLocation ?? '—'}`,
+          `- **Position:** ${employee.position ?? '-'}`,
+          `- **Department:** ${employee.department ?? '-'}`,
+          `- **Branch:** ${employee.branch ?? '-'}`,
+          `- **Manager:** ${employee.manager?.fullName ?? '-'}`,
+          `- **Email:** ${employee.email ?? '-'}`,
+          `- **Phone:** ${employee.phone ?? '-'}`,
+          `- **Work location:** ${employee.workplace ?? employee.workLocation ?? '-'}`,
         ];
         return toolResult(lines.join('\n'), { employee });
       } catch (error) {

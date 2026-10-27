@@ -642,14 +642,14 @@ test('call_api_write without confirm previews and sends nothing', async () => {
     assert.deepEqual(preview.validation, { checked: true, valid: true, errors: [] });
     assert.deepEqual(preview.request, { method: 'POST', path: '/expense-form' });
     assert.deepEqual(preview.body, VALID_EXPENSE);
-    assert.equal(preview.summary, 'Changes data: POST /expense-form — Summary of POST /expense-form');
+    assert.equal(preview.summary, 'Changes data: POST /expense-form - Summary of POST /expense-form');
     assert.deepEqual(preview.nextAction, {
       tool: 'call_api_write',
       arguments: { id: 'POST /expense-form', body: VALID_EXPENSE, confirm: true },
       reason: 'Only after the user explicitly confirms this preview.',
     });
     const text = textOf(result);
-    assert.match(text, /Preview — nothing has been sent/);
+    assert.match(text, /Preview: nothing has been sent/);
     assert.match(text, /Run it only after they explicitly confirm/);
   });
 });

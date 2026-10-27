@@ -31,7 +31,7 @@ export function registerListAnnouncements(server: McpServer, client: TeamsoClien
         }
         const text = announcements
           .map(announcement => [
-            `### ${announcement.date ?? 'Undated'}${announcement.sharedBy ? ` — ${announcement.sharedBy}` : ''}`,
+            `### ${announcement.date ?? 'Undated'}${announcement.sharedBy ? `: ${announcement.sharedBy}` : ''}`,
             '',
             truncate(announcement.text, PREVIEW_LENGTH) || '_(no text)_',
           ].join('\n'))

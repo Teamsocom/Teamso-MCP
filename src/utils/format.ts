@@ -8,7 +8,7 @@ export function markdownTable(headers: string[], rows: Array<Array<string | numb
 }
 
 export function escapeCell(value: string | number | boolean | undefined | null): string {
-  if (value === undefined || value === null || value === '') return '—';
+  if (value === undefined || value === null || value === '') return '-';
   return String(value).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
 }
 
@@ -20,9 +20,9 @@ export function formatDays(value: number): string {
 
 export function formatDateRange(start: string | undefined, end: string | undefined): string {
   if (start && end) return `${start} → ${end}`;
-  return start ?? end ?? '—';
+  return start ?? end ?? '-';
 }
 
 export function codeList(values: string[]): string {
-  return values.length ? values.map(value => `\`${value}\``).join(', ') : '—';
+  return values.length ? values.map(value => `\`${value}\``).join(', ') : '-';
 }
