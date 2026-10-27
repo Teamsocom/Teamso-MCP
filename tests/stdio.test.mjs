@@ -61,7 +61,7 @@ test('the stdio binary answers initialize and tools/list', async () => {
   assert.equal(initialize.result.serverInfo.version, VERSION);
   assert.match(initialize.result.instructions, /request_leave_otp/);
   assert.equal(list.result.tools.length, TOOL_NAMES.length);
-  assert.equal(list.result.tools.length, 34);
+  assert.equal(list.result.tools.length, 37);
   assert.match(initialize.result.instructions, /find_api_endpoints/);
   assert.match(stderr, /running on stdio \(api: https:\/\/api\.teamso\.com\/v1\)/);
 });
@@ -90,7 +90,7 @@ test('an unknown TEAMSO_TOOLSETS name stops the binary with the valid names', as
   const { code, stderr } = await runBin({ TEAMSO_ACCESS_TOKEN: 'tms_pat_dummy', TEAMSO_TOOLSETS: 'leave,paryoll' }, [], 0);
   assert.equal(code, 1);
   assert.match(stderr, /Unknown Teamso toolset\(s\): paryoll/);
-  assert.match(stderr, /core, help, leave, approvals, employees, performance, communication, payroll, api/);
+  assert.match(stderr, /core, help, leave, approvals, employees, performance, badges, communication, payroll, api/);
 });
 
 test('the stdio binary refuses to start without a valid token', async () => {

@@ -249,7 +249,7 @@ test('toolsets cover every tool exactly once', () => {
   const grouped = TOOLSET_NAMES.flatMap(name => TOOLSETS[name]);
   assert.deepEqual([...grouped].sort(), [...TOOL_NAMES].sort());
   assert.equal(new Set(grouped).size, grouped.length);
-  assert.deepEqual(TOOLSET_NAMES, ['core', 'help', 'leave', 'approvals', 'employees', 'performance', 'communication', 'payroll', 'api']);
+  assert.deepEqual(TOOLSET_NAMES, ['core', 'help', 'leave', 'approvals', 'employees', 'performance', 'badges', 'communication', 'payroll', 'api']);
   assert.ok(Object.isFrozen(TOOLSETS));
 });
 

@@ -49,7 +49,9 @@ export const DEFAULT_INSTRUCTIONS = [
   'Prompts: request_leave and review_pending_approvals walk through these flows.',
   'Approvals: list_pending_approvals → approve_or_reject_leave (a rejection needs a reason).',
   'Goals use the period title from list_performance_periods.',
-  'Confirm every write (leave requests, cancellations, approvals, goal changes) with the user before calling it, '
+  'Badges ("rozet", "takdir"): search_employees for the people, list_badges for what the user may give, confirm the '
+    + 'badge, the people and the message, then give_badge. list_my_badges shows the badges the user received.',
+  'Confirm every write (leave requests, cancellations, approvals, goal changes, badges) with the user before calling it, '
     + 'and follow structuredContent.nextAction when present.',
   'Everything else in Teamso (expenses, overtime, time tracking, payroll, recruiting, inventory, documents, '
     + 'settings...): prefer a specific tool above when one fits; otherwise find_api_endpoints (or list_api_modules) '

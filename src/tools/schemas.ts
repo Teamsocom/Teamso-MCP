@@ -329,6 +329,81 @@ export const evaluationApprovalOutputSchema = {
   message: z.string(),
 };
 
+// ----------------------------------------------------------------- badges
+
+export const peerQuotaSchema = z.object({
+  monthlyQuota: z.number(),
+  used: z.number(),
+  remaining: z.number(),
+  resetsOn: z.string().optional(),
+});
+
+export const badgeOptionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  tier: z.string().optional(),
+  points: z.number().optional(),
+  givers: z.array(z.string()),
+  requiresApproval: z.boolean(),
+  requireMessage: z.boolean(),
+  defaultVisibility: z.string().optional(),
+  maxPerRecipient: z.number().optional(),
+  cooldownDays: z.number().optional(),
+});
+
+export const badgeListOutputSchema = {
+  role: z.string(),
+  canAward: z.boolean(),
+  badges: z.array(badgeOptionSchema),
+  total: z.number(),
+  peerQuota: peerQuotaSchema.optional(),
+  nextAction: nextActionSchema.optional(),
+};
+
+const badgeRecipientSchema = z.object({
+  userId: z.string(),
+  fullName: z.string().optional(),
+  awardId: z.string().optional(),
+  code: z.string().optional(),
+  reason: z.string().optional(),
+  availableOn: z.string().optional(),
+});
+
+export const badgeGivenOutputSchema = {
+  badge: z.object({ id: z.string(), name: z.string().optional() }),
+  status: z.string(),
+  pendingApproval: z.boolean(),
+  source: z.string(),
+  awarded: z.array(badgeRecipientSchema),
+  failed: z.array(badgeRecipientSchema),
+  peerQuota: peerQuotaSchema.optional(),
+  message: z.string(),
+};
+
+export const myBadgesOutputSchema = {
+  totalAwards: z.number(),
+  distinctBadges: z.number(),
+  totalPoints: z.number().optional(),
+  awards: z.array(z.object({
+    id: z.string(),
+    badge: z.object({
+      id: z.string(),
+      name: z.string(),
+      category: z.string().optional(),
+      tier: z.string().optional(),
+    }),
+    givenBy: z.object({ id: z.string(), fullName: z.string() }).nullable(),
+    source: z.string().optional(),
+    message: z.string().optional(),
+    visibility: z.string().optional(),
+    points: z.number().optional(),
+    awardedAt: z.string().optional(),
+  })),
+  total: z.number(),
+};
+
 // ---------------------------------------------------------- communication
 
 export const announcementsOutputSchema = {

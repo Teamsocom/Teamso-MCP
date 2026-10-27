@@ -11,6 +11,10 @@ import type {
   TeamsoApiEndpointPage,
   TeamsoApiModule,
   TeamsoAuthorizedEmployee,
+  TeamsoBadgeAwardable,
+  TeamsoBadgeAwardPage,
+  TeamsoBadgeAwardRequest,
+  TeamsoBadgeAwardResult,
   TeamsoDayCalculation,
   TeamsoEnvelope,
   TeamsoEvaluationApproval,
@@ -545,6 +549,32 @@ export class TeamsoClient {
   ): Promise<TeamsoEnvelope<TeamsoEvaluationApproval>> {
     return this.requestEnvelope<TeamsoEvaluationApproval>('POST', '/user-goal/approve-evaluation-process', {
       query: { periodName: params.periodName, userId: params.userId },
+      signal,
+    });
+  }
+
+  // ----------------------------------------------------------------- badges
+
+  /** Badges the caller may give now, their giving role and the peer quota left. */
+  async getAwardableBadges(signal?: AbortSignal): Promise<TeamsoBadgeAwardable> {
+    return this.call<TeamsoBadgeAwardable>('GET', '/badge-award/awardable', { signal });
+  }
+
+  /**
+   * Gives one badge to one or more people (the same endpoint and rules as the web). People who could not get it
+   * are listed in `failed`; when nobody got it the API answers 400 `BADGE_AWARD_NONE_GIVEN` with the same result.
+   */
+  async giveBadge(request: TeamsoBadgeAwardRequest, signal?: AbortSignal): Promise<TeamsoBadgeAwardResult> {
+    return this.call<TeamsoBadgeAwardResult>('POST', '/badge-award', { body: request, signal });
+  }
+
+  /** The caller's active awards, newest first, with totals. */
+  async listMyBadgeAwards(
+    params: { page?: number; size?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<TeamsoBadgeAwardPage> {
+    return this.call<TeamsoBadgeAwardPage>('GET', '/badge-award/my', {
+      query: { page: params.page ?? 0, size: params.size ?? 20 },
       signal,
     });
   }

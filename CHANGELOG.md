@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.3.0
+
+### Added
+
+- Badge tools (toolset `badges`), with the token owner's own Teamso rights and limits:
+  - `list_badges`: the recognition badges the user can give now, their giving role (`ADMIN`, `MANAGER`, `PEER`,
+    `NONE`), whether a badge needs a message or an approval, and the monthly peer quota left. Optional name filter
+    without Turkish characters.
+  - `give_badge`: gives a badge (id or exact name) to 1-50 colleagues with a message and optional visibility through
+    `POST /badge-award`, the endpoint of the web app. The API applies the same rules as on the web (who may give what
+    to whom, per-person limit, waiting days, approval, peer quota); people who cannot get the badge are listed with
+    the reason and the date it is possible again. Checks the message length and the one-person peer rule first.
+  - `list_my_badges`: the badges the user received, with the giver (Teamso for automatic ones), the message and the
+    totals; points only when the company shows them.
+- The server instructions name the badge flow (search_employees, list_badges, confirm, give_badge).
+
+### Changed
+
+- `TOOL_NAMES` and `TOOLSETS` list the badge tools right after the performance tools, so the generic API tools stay
+  last (they are the catch-all for every other module). No earlier tool was renamed or removed.
+
 ## 1.2.1
 
 ### Fixed

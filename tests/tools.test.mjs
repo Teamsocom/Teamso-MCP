@@ -26,6 +26,7 @@ const EXPECTED_TOOLS = [
   'list_performance_periods', 'list_my_goals', 'list_team_goals', 'create_user_goal',
   'send_goals_to_approval', 'approve_goal', 'revise_and_approve_goal', 'update_goal_actual_value',
   'update_manager_actual_value', 'approve_goal_evaluation',
+  'list_badges', 'give_badge', 'list_my_badges',
   'list_announcements',
   'list_my_payslips', 'get_payslip_pdf',
   'find_api_endpoints', 'list_api_modules', 'describe_api_endpoint', 'call_api_read', 'call_api_write',
