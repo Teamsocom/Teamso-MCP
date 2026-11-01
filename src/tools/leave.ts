@@ -106,7 +106,7 @@ export function registerListLeaveTypes(server: McpServer, client: TeamsoClient):
             leaveTypeRules(type).join('; '),
           ]),
         );
-        return toolResult(`## Leave types — ${policy.name ?? 'your policy'}\n\n${table}`, { policy, leaveTypes });
+        return toolResult(`## Leave types: ${policy.name ?? 'your policy'}\n\n${table}`, { policy, leaveTypes });
       } catch (error) {
         return apiErrorResult(error, LEAVE_POLICY_HINTS);
       }
@@ -172,7 +172,7 @@ export function registerCalculateLeaveDays(server: McpServer, client: TeamsoClie
           `## ${prepared.leaveType.name}: ${formatDays(prepared.workingDays)}`,
           '',
           `- **Dates:** ${formatDateRange(prepared.startDate, prepared.endDate)}`,
-          `- **Back at work:** ${prepared.returnToWorkDate ?? '—'}`,
+          `- **Back at work:** ${prepared.returnToWorkDate ?? '-'}`,
           `- **Balance:** ${formatDays(remainingDays)} → ${formatDays(remainingDays - prepared.workingDays)} after this request`,
         ];
         if (!canRequest) {
@@ -409,7 +409,7 @@ export function registerCancelLeaveRequest(server: McpServer, client: TeamsoClie
             + 'tell HR so payroll can be corrected.'
           : 'The leave request was cancelled.';
         return toolResult(
-          `## Leave request cancelled\n\n- **Type:** ${leave.leaveTypeName ?? '—'}\n`
+          `## Leave request cancelled\n\n- **Type:** ${leave.leaveTypeName ?? '-'}\n`
             + `- **Dates:** ${formatDateRange(leave.start, leave.end)}\n\n${message}`,
           { cancelled: true, leave, closedPayrollPeriods, message },
         );

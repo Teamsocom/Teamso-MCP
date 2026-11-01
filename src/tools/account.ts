@@ -23,11 +23,11 @@ export function registerGetMe(server: McpServer, client: TeamsoClient): void {
         const lines = [
           `## ${user.fullName}`,
           '',
-          `- **Email:** ${user.email ?? '—'}`,
-          `- **Company:** ${user.company.name ?? '—'}`,
-          `- **Department / position:** ${user.department ?? '—'} / ${user.position ?? '—'}`,
-          `- **Manager:** ${user.manager?.fullName ?? '—'}`,
-          `- **Roles:** ${user.roles.join(', ') || '—'}`,
+          `- **Email:** ${user.email ?? '-'}`,
+          `- **Company:** ${user.company.name ?? '-'}`,
+          `- **Department / position:** ${user.department ?? '-'} / ${user.position ?? '-'}`,
+          `- **Manager:** ${user.manager?.fullName ?? '-'}`,
+          `- **Roles:** ${user.roles.join(', ') || '-'}`,
           `- **Permissions:** ${user.permissions.length}`,
         ];
         return toolResult(lines.join('\n'), { user });

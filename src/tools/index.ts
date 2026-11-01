@@ -10,6 +10,7 @@ import {
   registerRequestSmsCode,
 } from './api.js';
 import { registerApproveOrRejectLeave, registerListPendingApprovals } from './approvals.js';
+import { registerGiveBadge, registerListBadges, registerListMyBadges } from './badges.js';
 import { registerListAnnouncements } from './communication.js';
 import { registerGetEmployeeProfile, registerSearchEmployees } from './employees.js';
 import {
@@ -73,6 +74,9 @@ const REGISTRARS = {
   update_goal_actual_value: registerUpdateGoalActualValue,
   update_manager_actual_value: registerUpdateManagerActualValue,
   approve_goal_evaluation: registerApproveGoalEvaluation,
+  list_badges: registerListBadges,
+  give_badge: registerGiveBadge,
+  list_my_badges: registerListMyBadges,
   list_announcements: registerListAnnouncements,
   list_my_payslips: registerListMyPayslips,
   get_payslip_pdf: registerGetPayslipPdf,
@@ -118,6 +122,7 @@ export const TOOLSETS = Object.freeze({
     'update_manager_actual_value',
     'approve_goal_evaluation',
   ]),
+  badges: Object.freeze(['list_badges', 'give_badge', 'list_my_badges']),
   communication: Object.freeze(['list_announcements']),
   payroll: Object.freeze(['list_my_payslips', 'get_payslip_pdf']),
   api: Object.freeze([
@@ -192,6 +197,9 @@ export {
   registerUpdateGoalActualValue,
   registerUpdateManagerActualValue,
   registerApproveGoalEvaluation,
+  registerListBadges,
+  registerGiveBadge,
+  registerListMyBadges,
   registerListAnnouncements,
   registerListMyPayslips,
   registerGetPayslipPdf,

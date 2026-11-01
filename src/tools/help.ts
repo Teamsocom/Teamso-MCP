@@ -195,7 +195,7 @@ function articleMarkdown(article: HelpArticle, lang: HelpLanguage, origin: strin
     article.summary ?? '',
     '',
     `- Id: \`${article.id}\``,
-    `- Roles: ${(article.roles ?? []).join(', ') || '—'}`,
+    `- Roles: ${(article.roles ?? []).join(', ') || '-'}`,
   ];
   if (article.routes?.length) lines.push(`- Screens: ${article.routes.join(', ')}`);
   lines.push(`- Source: ${absoluteHelpUrl(article, origin)}`);

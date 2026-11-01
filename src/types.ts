@@ -457,6 +457,112 @@ export interface HelpBundle {
 
 export type HelpLanguage = 'tr' | 'en';
 
+// ----------------------------------------------------------------- badges
+
+/** A badge the caller may give (`BadgeOptionDto`, `GET /badge-award/awardable`). */
+export interface TeamsoBadgeOption {
+  id: string;
+  code?: string | null;
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  tier?: string | null;
+  /** Only when the company shows points. */
+  points?: number | null;
+  awardMode?: string | null;
+  givers?: string[] | null;
+  requiresApproval?: boolean;
+  requireMessage?: boolean;
+  defaultVisibility?: string | null;
+  maxPerRecipient?: number | null;
+  cooldownDays?: number | null;
+}
+
+export interface TeamsoBadgePeerQuota {
+  monthlyQuota: number;
+  used: number;
+  remaining: number;
+  resetsOn?: string | null;
+  daysUntilReset?: number;
+  allowCrossDepartment?: boolean;
+  departmentName?: string | null;
+}
+
+/** `GET /badge-award/awardable`: what the caller may give. */
+export interface TeamsoBadgeAwardable {
+  /** ADMIN, MANAGER, PEER or NONE. */
+  role: string;
+  canAward: boolean;
+  managerCanAward?: boolean;
+  teamSize?: number;
+  peerEnabled?: boolean;
+  peerQuota?: TeamsoBadgePeerQuota | null;
+  badges?: TeamsoBadgeOption[] | null;
+}
+
+/** `POST /badge-award` body. */
+export interface TeamsoBadgeAwardRequest {
+  badgeId: string;
+  recipientUserIds: string[];
+  message?: string;
+  visibility?: 'PUBLIC' | 'PRIVATE';
+}
+
+export interface TeamsoBadgeAwardRecipient {
+  userId: string;
+  fullName?: string | null;
+  awardId?: string | null;
+  /** Failure code: SELF, RECIPIENT_NOT_FOUND, RECIPIENT_INACTIVE, LIMIT_REACHED, COOLDOWN, OTHER_DEPARTMENT, ALREADY_AWARDED. */
+  code?: string | null;
+  limit?: number | null;
+  availableOn?: string | null;
+}
+
+/** `POST /badge-award` result (`BadgeAwardResultDto`). */
+export interface TeamsoBadgeAwardResult {
+  badgeId: string;
+  badgeName?: string | null;
+  status: string;
+  pendingApproval: boolean;
+  source: string;
+  peerQuota?: TeamsoBadgePeerQuota | null;
+  awardedCount: number;
+  failedCount: number;
+  awarded?: TeamsoBadgeAwardRecipient[] | null;
+  failed?: TeamsoBadgeAwardRecipient[] | null;
+}
+
+export interface TeamsoBadgePerson {
+  id: string;
+  fullName?: string | null;
+}
+
+/** One award (`BadgeAwardDto`). */
+export interface TeamsoBadgeAward {
+  id: string;
+  badge?: TeamsoBadgeOption | null;
+  recipient?: TeamsoBadgePerson | null;
+  giver?: TeamsoBadgePerson | null;
+  source?: string | null;
+  message?: string | null;
+  visibility?: string | null;
+  status?: string | null;
+  points?: number | null;
+  createdAt?: string | null;
+}
+
+/** `GET /badge-award/my`. */
+export interface TeamsoBadgeAwardPage {
+  items?: TeamsoBadgeAward[] | null;
+  total?: number;
+  page?: number;
+  size?: number;
+  totalAwards?: number;
+  distinctBadges?: number;
+  totalPoints?: number | null;
+  showPoints?: boolean;
+}
+
 // ------------------------------------------------------------- API catalog
 
 /**

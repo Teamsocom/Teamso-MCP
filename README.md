@@ -200,6 +200,14 @@ TEAMSO_ACCESS_TOKEN=tms_pat_your-token
 | `update_manager_actual_value` | Enter your assessment of an employee's goal as their manager |
 | `approve_goal_evaluation` | Approve an employee's evaluation for a period |
 
+### Badges
+
+| Tool | Description |
+|------|-------------|
+| `list_badges` | The recognition badges you can give, your giving role and the peer quota left |
+| `give_badge` | Give a badge with a message to one or more colleagues, with your own Teamso rights and limits |
+| `list_my_badges` | The badges you have received, who gave them and when |
+
 ### Communication
 
 | Tool | Description |
@@ -297,6 +305,7 @@ tools a server offers, as a comma-separated list. Default: all tools.
 | `approvals` | `list_pending_approvals`, `approve_or_reject_leave` |
 | `employees` | `search_employees`, `get_employee_profile` |
 | `performance` | the ten goal and evaluation tools |
+| `badges` | `list_badges`, `give_badge`, `list_my_badges` |
 | `communication` | `list_announcements` |
 | `payroll` | `list_my_payslips`, `get_payslip_pdf` |
 | `api` | `find_api_endpoints`, `list_api_modules`, `describe_api_endpoint`, `call_api_read`, `call_api_write`, `request_sms_code` |
@@ -417,7 +426,7 @@ const client = new TeamsoClient(userToken, 'https://api.teamso.com/v1', {
 
 | Export | Description |
 |--------|-------------|
-| `createMcpServer(client, options?)` | Creates an McpServer with all 34 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
+| `createMcpServer(client, options?)` | Creates an McpServer with all 37 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
 | `TeamsoClient` | Teamso REST client (personal access token, envelope handling, optional trusted-proxy signing) |
 | `TeamsoApiError` | Error with `status`, `messageCode`, `apiMessage` and the response `body` |
 | `registerTools(server, client, options?)` | Register the tools (optionally only some `toolsets`) on an existing McpServer |
@@ -446,7 +455,7 @@ import { registerPrompts, PROMPT_NAMES } from '@teamso/teamso-mcp/prompts';
 | `TEAMSO_API_BASE_URL` | No | Override the API base URL (default: `https://api.teamso.com/v1`) |
 | `TEAMSO_HELP_BASE_URL` | No | Site the help articles are downloaded from (default: `https://teamso.com`) |
 | `TEAMSO_HELP_PUBLIC_URL` | No | Public site used for help links and images in tool output (default: `TEAMSO_HELP_BASE_URL`). Set it when the download address is internal |
-| `TEAMSO_TOOLSETS` | No | Comma-separated toolsets to serve: `core`, `help`, `leave`, `approvals`, `employees`, `performance`, `communication`, `payroll`, `api` (default: all) |
+| `TEAMSO_TOOLSETS` | No | Comma-separated toolsets to serve: `core`, `help`, `leave`, `approvals`, `employees`, `performance`, `badges`, `communication`, `payroll`, `api` (default: all) |
 
 ## Self-hosting from source
 

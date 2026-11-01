@@ -321,7 +321,7 @@ export function registerDescribeApiEndpoint(server: McpServer, client: TeamsoCli
           details.summary ?? '',
           '',
           `- **Effect:** ${effectLabel(details)}`,
-          `- **Module:** ${details.moduleTitle ?? details.module ?? '—'}`,
+          `- **Module:** ${details.moduleTitle ?? details.module ?? '-'}`,
           `- **Access:** ${details.access ?? 'allowed'}${details.accessReason ? ` (${details.accessReason})` : ''}`,
           `- **SMS code:** ${smsLabel(details)}`,
           `- **Response:** ${details.fileResponse ? 'a file (returned as an embedded resource)' : 'JSON'}`
@@ -475,7 +475,7 @@ export function registerCallApiWrite(server: McpServer, client: TeamsoClient): v
             + 'the non-file form fields.'),
         files: filesSchema,
         confirm: z.boolean().default(false)
-          .describe('false (default): preview only, nothing is sent. true: run it — only after the user explicitly '
+          .describe('false (default): preview only, nothing is sent. true: run it, only after the user explicitly '
             + 'confirmed the preview.'),
         otp_code: otpCodeSchema.optional()
           .describe('SMS verification code from `request_sms_code`, for endpoints that need one (valid for 3 minutes).'),
@@ -939,7 +939,7 @@ function typeLabel(schema: Record<string, unknown>): string {
 
 function humanSummary(details: ApiEndpointDetails, requestPath: string): string {
   const parts = [`${effectLabel(details)}: ${details.method} ${requestPath}`];
-  if (details.summary) parts.push(`— ${truncateText(details.summary, 160)}`);
+  if (details.summary) parts.push(`- ${truncateText(details.summary, 160)}`);
   if (details.sms) {
     parts.push(details.sms.mode === 'always' || details.sms.preVerify
       ? '(needs an SMS code)'
@@ -967,7 +967,7 @@ function previewText(
   warnings: string[],
 ): string {
   const lines = [
-    '## Preview — nothing has been sent',
+    '## Preview: nothing has been sent',
     '',
     `**${summary}**`,
     '',
