@@ -15,7 +15,7 @@ export interface TeamsoEnvelope<T = unknown> {
 }
 
 export interface TeamsoCredentials {
-  /** Personal access token, `tms_pat_...`. */
+  /** Personal access token, `tms_pat_...` (or a hosted-server sign-in token, `tms_at_...`). */
   accessToken: string;
   /** API base URL including the context path, e.g. `https://api.teamso.com/v1`. */
   baseUrl?: string;
