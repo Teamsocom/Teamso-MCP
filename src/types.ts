@@ -563,6 +563,134 @@ export interface TeamsoBadgeAwardPage {
   showPoints?: boolean;
 }
 
+// ------------------------------------------------------------- simulation
+
+/** One assignment of the caller (`GET /simulation/assignments/mine`). */
+export interface TeamsoSimulationAssignment {
+  assignmentUserId: string;
+  assignmentId?: string | null;
+  /** SCENARIO or TRACK. */
+  contentType?: string | null;
+  scenarioId?: string | null;
+  trackId?: string | null;
+  trackItemId?: string | null;
+  title?: string | null;
+  /** `yyyy-MM-dd`. */
+  dueDate?: string | null;
+  /** NOT_STARTED, IN_PROGRESS, PASSED, FAILED, OVERDUE or CANCELLED. */
+  status?: string | null;
+  bestScore?: number | null;
+  attempts?: number | null;
+  /** 0 means unlimited. */
+  maxAttempts?: number | null;
+  passScore?: number | null;
+  examMode?: boolean | null;
+  /** TEXT, VOICE or BOTH. */
+  allowedModes?: string | null;
+  difficulty?: string | null;
+  note?: string | null;
+  overdue?: boolean | null;
+}
+
+/** One attempt (`GET /simulation/attempts/mine`, `GET /simulation/attempts`). */
+export interface TeamsoSimulationAttempt {
+  id: string;
+  scenarioId?: string | null;
+  scenarioTitle?: string | null;
+  /** Only in the team list. */
+  userId?: string | null;
+  userName?: string | null;
+  /** TEXT or VOICE. */
+  mode?: string | null;
+  /** EASY, MEDIUM or HARD. */
+  difficulty?: string | null;
+  kind?: string | null;
+  /** CREATED, ACTIVE, ENDED, SCORING, SCORED, SCORING_FAILED or NOT_SCORABLE. */
+  status?: string | null;
+  totalScore?: number | null;
+  passed?: boolean | null;
+  /** ISO instant (`2026-11-02T09:15:00Z`). */
+  startedAt?: string | null;
+  durationSec?: number | null;
+  reviewState?: string | null;
+  overridden?: boolean | null;
+}
+
+export interface TeamsoSimulationAttemptPage {
+  items?: TeamsoSimulationAttempt[] | null;
+  total?: number;
+  page?: number;
+  size?: number;
+}
+
+export interface TeamsoSimulationEvidence {
+  turn?: number | null;
+  quote?: string | null;
+}
+
+export interface TeamsoSimulationCriterion {
+  key: string;
+  name?: string | null;
+  skillTag?: string | null;
+  weight?: number | null;
+  /** 0-4. */
+  level?: number | null;
+  score?: number | null;
+  rationale?: string | null;
+  evidence?: TeamsoSimulationEvidence[] | null;
+  overridden?: boolean | null;
+}
+
+/**
+ * `GET /simulation/attempts/{id}/result`. `attempt.turns` (the transcript) is never passed on by the tools.
+ */
+export interface TeamsoSimulationAttemptResult {
+  totalScore?: number | null;
+  passed?: boolean | null;
+  /** SUCCESS or FAIL. */
+  outcome?: string | null;
+  criticalFailed?: boolean | null;
+  passScore?: number | null;
+  criteria?: TeamsoSimulationCriterion[] | null;
+  strengths?: string[] | null;
+  priorities?: string[] | null;
+  betterReplies?: Array<{ turn?: number | null; text?: string | null }> | null;
+  nextPracticeSkill?: string | null;
+  scenario?: { id?: string | null; title?: string | null } | null;
+  user?: { id?: string | null; name?: string | null } | null;
+  durationSec?: number | null;
+  attempt?: (Partial<TeamsoSimulationAttempt> & { turns?: unknown[] | null }) | null;
+}
+
+export interface TeamsoSimulationPersona {
+  name?: string | null;
+  age?: number | null;
+  occupation?: string | null;
+  city?: string | null;
+}
+
+/** One scenario on a catalog shelf. */
+export interface TeamsoSimulationCatalogItem {
+  scenarioId: string;
+  title?: string | null;
+  description?: string | null;
+  sector?: string | null;
+  language?: string | null;
+  direction?: string | null;
+  modes?: string[] | string | null;
+  difficulties?: string[] | string | null;
+  estMinutes?: number | null;
+  persona?: TeamsoSimulationPersona | null;
+  myBestScore?: number | null;
+  myAttempts?: number | null;
+  assignment?: Partial<TeamsoSimulationAssignment> | null;
+}
+
+/** `GET /simulation/catalog`. */
+export interface TeamsoSimulationCatalog {
+  shelves?: Array<{ key: string; items?: TeamsoSimulationCatalogItem[] | null }> | null;
+}
+
 // ------------------------------------------------------------- API catalog
 
 /**

@@ -51,6 +51,10 @@ export const DEFAULT_INSTRUCTIONS = [
   'Goals use the period title from list_performance_periods.',
   'Badges ("rozet", "takdir"): search_employees for the people, list_badges for what the user may give, confirm the '
     + 'badge, the people and the message, then give_badge. list_my_badges shows the badges the user received.',
+  'AI Simulation ("simülasyon", "rol oyunu", "pratik"): list_simulation_assignments for the practice assigned to '
+    + 'the user, list_simulations for the scenario catalog, get_simulation_results for scores and feedback (with '
+    + 'attempt_id for one attempt; scope "team" for managers and admins). An AI Simulation conversation happens in '
+    + 'the Teamso web app (/dashboard/simulation); no tool starts one.',
   'Confirm every write (leave requests, cancellations, approvals, goal changes, badges) with the user before calling it, '
     + 'and follow structuredContent.nextAction when present.',
   'Everything else in Teamso (expenses, overtime, time tracking, payroll, recruiting, inventory, documents, '
@@ -81,8 +85,8 @@ export interface CreateMcpServerOptions {
   /** Usage instructions sent to the client in `initialize`. */
   instructions?: string;
   /**
-   * Tool groups to serve (`core`, `help`, `leave`, `approvals`, `employees`, `performance`,
-   * `communication`, `payroll`, `api`), as an array or a comma-separated list. Default: all.
+   * Tool groups to serve (`core`, `help`, `leave`, `approvals`, `employees`, `performance`, `badges`,
+   * `simulation`, `communication`, `payroll`, `api`), as an array or a comma-separated list. Default: all.
    */
   toolsets?: string | readonly string[];
 }

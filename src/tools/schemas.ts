@@ -404,6 +404,130 @@ export const myBadgesOutputSchema = {
   total: z.number(),
 };
 
+// ------------------------------------------------------------- simulation
+
+export const simulationAssignmentSchema = z.object({
+  assignmentUserId: z.string(),
+  assignmentId: z.string().optional(),
+  contentType: z.string().optional(),
+  scenarioId: z.string().optional(),
+  trackId: z.string().optional(),
+  trackItemId: z.string().optional(),
+  title: z.string(),
+  dueDate: z.string().optional(),
+  status: z.string(),
+  overdue: z.boolean(),
+  bestScore: z.number().optional(),
+  attempts: z.number(),
+  maxAttempts: z.number().optional(),
+  attemptsLeft: z.number().optional(),
+  passScore: z.number().optional(),
+  examMode: z.boolean(),
+  allowedModes: z.string().optional(),
+  difficulty: z.string().optional(),
+  note: z.string().optional(),
+});
+
+export const simulationAssignmentsOutputSchema = {
+  assignments: z.array(simulationAssignmentSchema),
+  total: z.number(),
+  includeClosed: z.boolean(),
+  practiceUrl: z.string(),
+};
+
+export const simulationAttemptSchema = z.object({
+  id: z.string(),
+  scenarioId: z.string().optional(),
+  scenarioTitle: z.string().optional(),
+  userId: z.string().optional(),
+  userName: z.string().optional(),
+  mode: z.string().optional(),
+  difficulty: z.string().optional(),
+  kind: z.string().optional(),
+  status: z.string(),
+  totalScore: z.number().optional(),
+  passed: z.boolean().optional(),
+  startedAt: z.string().optional(),
+  durationSec: z.number().optional(),
+  reviewState: z.string().optional(),
+  overridden: z.boolean(),
+});
+
+export const simulationAttemptResultSchema = z.object({
+  attemptId: z.string(),
+  scenarioTitle: z.string().optional(),
+  userName: z.string().optional(),
+  mode: z.string().optional(),
+  difficulty: z.string().optional(),
+  startedAt: z.string().optional(),
+  durationSec: z.number().optional(),
+  totalScore: z.number().optional(),
+  passScore: z.number().optional(),
+  passed: z.boolean().optional(),
+  outcome: z.string().optional(),
+  criticalFailed: z.boolean(),
+  criteria: z.array(z.object({
+    key: z.string(),
+    name: z.string(),
+    skillTag: z.string().optional(),
+    weight: z.number().optional(),
+    level: z.number().optional(),
+    score: z.number().optional(),
+    rationale: z.string().optional(),
+    evidence: z.array(z.object({ turn: z.number().optional(), quote: z.string() })),
+    overridden: z.boolean(),
+  })),
+  strengths: z.array(z.string()),
+  priorities: z.array(z.string()),
+  betterReplies: z.array(z.object({ turn: z.number().optional(), text: z.string() })),
+  nextPracticeSkill: z.string().optional(),
+});
+
+export const simulationResultsOutputSchema = {
+  scope: z.enum(['mine', 'team', 'attempt']),
+  attempts: z.array(simulationAttemptSchema).optional(),
+  total: z.number().optional(),
+  page: z.number().optional(),
+  size: z.number().optional(),
+  result: simulationAttemptResultSchema.optional(),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const simulationCatalogOutputSchema = {
+  simulations: z.array(z.object({
+    scenarioId: z.string(),
+    title: z.string(),
+    description: z.string().optional(),
+    sector: z.string().optional(),
+    language: z.string().optional(),
+    direction: z.string().optional(),
+    modes: z.array(z.string()),
+    difficulties: z.array(z.string()),
+    estMinutes: z.number().optional(),
+    persona: z.object({
+      name: z.string().optional(),
+      age: z.number().optional(),
+      occupation: z.string().optional(),
+      city: z.string().optional(),
+    }).optional(),
+    myBestScore: z.number().optional(),
+    myAttempts: z.number(),
+    assignment: z.object({
+      assignmentUserId: z.string().optional(),
+      assignmentId: z.string().optional(),
+      dueDate: z.string().optional(),
+      status: z.string().optional(),
+      overdue: z.boolean().optional(),
+      passScore: z.number().optional(),
+      examMode: z.boolean().optional(),
+    }).nullable(),
+    shelves: z.array(z.string()),
+  })),
+  total: z.number(),
+  shelves: z.array(z.object({ key: z.string(), count: z.number() })),
+  practiceUrl: z.string(),
+};
+
 // ---------------------------------------------------------- communication
 
 export const announcementsOutputSchema = {

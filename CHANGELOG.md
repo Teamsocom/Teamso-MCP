@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.4.0
+
+### Added
+
+- AI Simulation tools (toolset `simulation`, TMS-4752), read-only, with the token owner's own Teamso rights:
+  - `list_simulation_assignments`: the practice assigned to the user (`GET /simulation/assignments/mine`), soonest
+    due date first, with status, overdue flag, best score, attempts used and left (`maxAttempts` 0 is unlimited),
+    pass score and exam mode. Only open ones (`NOT_STARTED`, `IN_PROGRESS`, `OVERDUE`) unless `include_closed`.
+  - `get_simulation_results`: the user's own attempts (`GET /simulation/attempts/mine`, `status` and `scenario_id`
+    filters), other people's with `scope: "team"` for managers and admins (`GET /simulation/attempts`, `from`/`to`
+    days, `user_id`, `scenario_id`, `mode`, `result`), or one attempt's score, criteria (level, rationale,
+    evidence), strengths, priorities and better replies with `attempt_id`. The transcript (`attempt.turns`) is
+    never returned. Start times are Turkey wall clock.
+  - `list_simulations`: the scenario catalog (`GET /simulation/catalog`) as one list, each scenario once with the
+    shelves it is on, its modes, difficulties, persona, the user's best score and an open assignment.
+- `MODULE_DISABLED`, `SIMULATION_NOT_FOUND` and `SIMULATION_FORBIDDEN` answers are explained (AI Simulation off or
+  not bought, unknown attempt, not your team).
+- The server instructions name the AI Simulation tools and say that the conversation itself happens in the Teamso
+  web app (`/dashboard/simulation`); no tool starts one.
+
+### Changed
+
+- `TOOL_NAMES` and `TOOLSETS` list the simulation tools right after the badge tools, so the generic API tools stay
+  last. No earlier tool was renamed or removed.
+
 ## 1.3.0
 
 ### Added
