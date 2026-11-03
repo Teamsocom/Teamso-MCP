@@ -64,7 +64,8 @@ export function describeError(error: unknown, hints: ApiErrorHints = {}): string
 
   if (error.status === 401) {
     return 'Teamso rejected the access token (it is invalid, expired, revoked, or its owner is inactive). '
-      + `Create a new personal access token at ${ACCESS_TOKEN_URL} and update \`TEAMSO_ACCESS_TOKEN\`.\n\n`
+      + `Create a new personal access token at ${ACCESS_TOKEN_URL} and update \`TEAMSO_ACCESS_TOKEN\`, `
+      + 'or, on https://mcp.teamso.com/v1, sign in again from the app.\n\n'
       + errorReference(error);
   }
   if (error.status === 403 && error.messageCode === 'IP_NOT_ALLOWED') {

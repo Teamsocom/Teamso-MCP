@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.1
+
+### Added
+
+- `TeamsoClient` also takes the access tokens of the hosted server's browser sign-in (`tms_at_...`, OAuth 2.1 on
+  https://mcp.teamso.com/v1). They work like personal access tokens: every call runs with the signed-in user's own
+  Teamso rights. The stdio server still asks for a personal access token in `TEAMSO_ACCESS_TOKEN`.
+
 ## 1.3.0
 
 ### Added
