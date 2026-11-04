@@ -58,3 +58,19 @@ test('output schema validation rejects unknown keys', async () => {
     await server.close();
   }
 });
+
+test('every tool lists its title in annotations.title and no parameter is untyped (MCP directory checks)', async () => {
+  const server = root.createMcpServer(new root.TeamsoClient(`tms_pat_${'A'.repeat(43)}`, 'http://127.0.0.1:9/v1'));
+  const [serverSide, clientSide] = InMemoryTransport.createLinkedPair();
+  await server.connect(serverSide);
+  const client = new Client({ name: 'directory-check', version: '1' });
+  await client.connect(clientSide);
+  const { tools } = await client.listTools();
+  for (const tool of tools) {
+    assert.equal(tool.annotations?.title, tool.title, `${tool.name} annotations.title`);
+    for (const [name, schema] of Object.entries(tool.inputSchema.properties ?? {})) {
+      assert.ok(schema.type || schema.anyOf || schema.enum, `${tool.name}.${name} has no type`);
+    }
+  }
+  await client.close();
+});
