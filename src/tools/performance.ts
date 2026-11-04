@@ -74,8 +74,8 @@ export function registerListPerformancePeriods(server: McpServer, client: Teamso
     'list_performance_periods',
     {
       title: 'List performance periods',
-      description: 'List the company\'s performance periods with their dates, target-entry window, who '
-        + 'enters goals and the evaluation scale. The `title` is the `period` argument of the goal tools.',
+      description: 'List the company\'s performance periods with their titles, dates, target-entry window, '
+        + 'who enters goals and the evaluation scale.',
       inputSchema: {},
       outputSchema: performancePeriodsOutputSchema,
       annotations: READ_ONLY,
@@ -333,7 +333,7 @@ export function registerApproveGoal(server: McpServer, client: TeamsoClient): vo
     'approve_goal',
     {
       title: 'Approve a goal',
-      description: 'Approve, without changes, a goal waiting for the caller\'s approval (`canApproveGoal`).',
+      description: 'Approve, without changes, a goal waiting for the caller\'s approval.',
       inputSchema: {
         goal_id: idSchema('Id of a goal of an employee the caller manages.'),
       },
@@ -356,8 +356,8 @@ export function registerReviseAndApproveGoal(server: McpServer, client: TeamsoCl
     'revise_and_approve_goal',
     {
       title: 'Revise and approve a goal',
-      description: 'Change a goal waiting for the caller\'s approval (`canReviseGoal`) and approve it '
-        + 'in one step. Only the fields given are changed; the employee sees the revision.',
+      description: 'Change a goal waiting for the caller\'s approval and approve it in one step. Only the '
+        + 'fields given are changed; the employee sees the revision.',
       inputSchema: {
         goal_id: idSchema('Id of a goal of an employee the caller manages.'),
         name: z.string().trim().min(1).max(255).optional().describe('New goal title.'),
@@ -397,9 +397,8 @@ export function registerUpdateGoalActualValue(server: McpServer, client: TeamsoC
     'update_goal_actual_value',
     {
       title: 'Enter my goal\'s actual value',
-      description: 'Enter or correct the achieved value of the caller\'s own goal during evaluation '
-        + '(`canEnterActualValue`). Send `actual_value` for numeric goals or `actual_text` for '
-        + '`OTHER` goals.',
+      description: 'Enter or correct the achieved value of the caller\'s own goal during evaluation. '
+        + 'Numeric goals take `actual_value`, `OTHER` goals take `actual_text`.',
       inputSchema: {
         goal_id: idSchema('Id of one of the caller\'s own goals.'),
         actual_value: z.number().optional().describe('Achieved numeric value.'),
@@ -467,11 +466,11 @@ export function registerApproveGoalEvaluation(server: McpServer, client: TeamsoC
     'approve_goal_evaluation',
     {
       title: 'Approve an employee\'s goal evaluation',
-      description: 'Approve the goal evaluation of one employee for a period at the caller\'s approval step '
-        + '(`canApproveEvaluation`). When it is the last step Teamso computes the final score.',
+      description: 'Approve the goal evaluation of one employee for a period at the caller\'s approval '
+        + 'step. When it is the last step Teamso computes the final score.',
       inputSchema: {
         period: periodSchema,
-        user_id: idSchema('Employee id of the goal owner (`userId`).'),
+        user_id: idSchema('Employee id of the goal owner.'),
       },
       outputSchema: evaluationApprovalOutputSchema,
       annotations: ADDITIVE_WRITE,

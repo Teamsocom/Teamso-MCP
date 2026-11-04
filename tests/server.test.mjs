@@ -84,6 +84,8 @@ test('tool texts only describe the tool: no other tool names, no instructions to
   const { tools } = await client.listTools();
   const toolName = new RegExp(`\\b(${tools.map((tool) => tool.name).join('|')})\\b`);
   const instruction = /\b(only after|ask the user|confirm (it|them|the)|show (it|them|the)|call (it|this|again)|use (it|this)|you|your)\b/i;
+  const otherTools = /\b(the|other) [a-z]+ tools\b/i;
+  const imperative = /(^|[.;:] )(Send|Use|Call|Pass|Set|Show|Ask|Confirm|Check) `/;
   const hidden = /[​-‏‪-‮⁠-⁤﻿]/;
   const texts = (value, path, out) => {
     if (value && typeof value === 'object') {
@@ -98,6 +100,8 @@ test('tool texts only describe the tool: no other tool names, no instructions to
     for (const [path, text] of texts({ description: tool.description, input: tool.inputSchema }, tool.name, [])) {
       assert.doesNotMatch(text, toolName, `${path} names another tool`);
       assert.doesNotMatch(text, instruction, `${path} instructs the model`);
+      assert.doesNotMatch(text, otherTools, `${path} refers to other tools`);
+      assert.doesNotMatch(text, imperative, `${path} instructs the caller`);
       assert.doesNotMatch(text, hidden, `${path} has hidden characters`);
     }
   }
