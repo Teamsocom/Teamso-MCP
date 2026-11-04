@@ -175,9 +175,33 @@ export function resolveToolsets(toolsets?: string | readonly string[]): ToolName
 }
 
 export function registerTools(server: McpServer, client: TeamsoClient, options: RegisterToolsOptions = {}): void {
+  const target = withAnnotationTitles(server);
   for (const name of resolveToolsets(options.toolsets)) {
-    REGISTRARS[name](server, client);
+    REGISTRARS[name](target, client);
   }
+}
+
+type ToolConfig = { title?: string; annotations?: Record<string, unknown> };
+
+/**
+ * MCP directories (Claude's Connectors Directory, the ChatGPT plugin review) read a tool's display name from
+ * `annotations.title`; every tool here has a top-level `title`, so it is copied into the annotations too.
+ */
+function withAnnotationTitles(server: McpServer): McpServer {
+  return new Proxy(server, {
+    get(target, property, receiver) {
+      if (property !== 'registerTool') return Reflect.get(target, property, receiver);
+      const register = target.registerTool as (...args: unknown[]) => unknown;
+      return (name: string, config: ToolConfig, callback: unknown) => register.call(
+        target,
+        name,
+        config.title && !config.annotations?.['title']
+          ? { ...config, annotations: { ...config.annotations, title: config.title } }
+          : config,
+        callback,
+      );
+    },
+  });
 }
 
 export {

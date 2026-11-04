@@ -58,3 +58,52 @@ test('output schema validation rejects unknown keys', async () => {
     await server.close();
   }
 });
+
+test('every tool lists its title in annotations.title and no parameter is untyped (MCP directory checks)', async () => {
+  const server = root.createMcpServer(new root.TeamsoClient(`tms_pat_${'A'.repeat(43)}`, 'http://127.0.0.1:9/v1'));
+  const [serverSide, clientSide] = InMemoryTransport.createLinkedPair();
+  await server.connect(serverSide);
+  const client = new Client({ name: 'directory-check', version: '1' });
+  await client.connect(clientSide);
+  const { tools } = await client.listTools();
+  for (const tool of tools) {
+    assert.equal(tool.annotations?.title, tool.title, `${tool.name} annotations.title`);
+    for (const [name, schema] of Object.entries(tool.inputSchema.properties ?? {})) {
+      assert.ok(schema.type || schema.anyOf || schema.enum, `${tool.name}.${name} has no type`);
+    }
+  }
+  await client.close();
+});
+
+test('tool texts only describe the tool: no other tool names, no instructions to the model, no hidden text', async () => {
+  const server = root.createMcpServer(new root.TeamsoClient(`tms_pat_${'A'.repeat(43)}`, 'http://127.0.0.1:9/v1'));
+  const [serverSide, clientSide] = InMemoryTransport.createLinkedPair();
+  await server.connect(serverSide);
+  const client = new Client({ name: 'directory-check', version: '1' });
+  await client.connect(clientSide);
+  const { tools } = await client.listTools();
+  const toolName = new RegExp(`\\b(${tools.map((tool) => tool.name).join('|')})\\b`);
+  const instruction = /\b(only after|ask the user|confirm (it|them|the)|show (it|them|the)|call (it|this|again)|use (it|this)|you|your)\b/i;
+  const otherTools = /\b(the|other) [a-z]+ tools\b/i;
+  const imperative = /(^|[.;:] )(Send|Use|Call|Pass|Set|Show|Ask|Confirm|Check) `/;
+  const hidden = /[​-‏‪-‮⁠-⁤﻿]/;
+  const texts = (value, path, out) => {
+    if (value && typeof value === 'object') {
+      for (const [key, child] of Object.entries(value)) {
+        if (key === 'description' && typeof child === 'string') out.push([path, child]);
+        else texts(child, `${path}.${key}`, out);
+      }
+    }
+    return out;
+  };
+  for (const tool of tools) {
+    for (const [path, text] of texts({ description: tool.description, input: tool.inputSchema }, tool.name, [])) {
+      assert.doesNotMatch(text, toolName, `${path} names another tool`);
+      assert.doesNotMatch(text, instruction, `${path} instructs the model`);
+      assert.doesNotMatch(text, otherTools, `${path} refers to other tools`);
+      assert.doesNotMatch(text, imperative, `${path} instructs the caller`);
+      assert.doesNotMatch(text, hidden, `${path} has hidden characters`);
+    }
+  }
+  await client.close();
+});

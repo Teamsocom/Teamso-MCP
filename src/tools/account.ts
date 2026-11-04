@@ -10,9 +10,9 @@ export function registerGetMe(server: McpServer, client: TeamsoClient): void {
     'get_me',
     {
       title: 'Get my Teamso profile',
-      description: 'Return the signed-in Teamso user: name, email, company, department, position, '
-        + 'manager, roles and permission codes. Use the permission codes to tell which actions '
-        + 'the user can take (e.g. `LEAVE_ADD` to request leave, `LEAVE_DELETE` to cancel one).',
+      description: 'Return the signed-in Teamso user: name, email, company, department, position, manager, '
+        + 'roles and permission codes (for example `LEAVE_ADD` allows requesting leave and `LEAVE_DELETE` '
+        + 'cancelling one).',
       inputSchema: {},
       outputSchema: meOutputSchema,
       annotations: READ_ONLY,

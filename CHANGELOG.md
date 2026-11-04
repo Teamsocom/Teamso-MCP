@@ -25,6 +25,38 @@
 - `TOOL_NAMES` and `TOOLSETS` list the simulation tools right after the badge tools, so the generic API tools stay
   last. No earlier tool was renamed or removed.
 
+## 1.3.4
+
+### Changed
+
+- The last tool texts that pointed at other tools or their result fields (`list_performance_periods`, the goal
+  approval tools, endpoint ids, SMS codes, uploads) or told the caller what to send now only describe the tool.
+
+## 1.3.3
+
+### Changed
+
+- Tool and parameter descriptions only say what each tool does, returns and requires. Pointers to other tools and
+  the "confirm with the user first" guidance moved to the server instructions sent in `initialize`, as the Claude
+  Connectors Directory asks. Tool behaviour is unchanged.
+
+## 1.3.2
+
+### Fixed
+
+- Every tool also carries its title in `annotations.title`, where MCP directories (Claude Connectors Directory, the
+  ChatGPT plugin review) read a tool's display name.
+- `call_api_read` and `call_api_write` describe the type of `body` (a JSON object, array or single value, or plain
+  text) instead of an untyped parameter.
+
+## 1.3.1
+
+### Added
+
+- `TeamsoClient` also takes the access tokens of the hosted server's browser sign-in (`tms_at_...`, OAuth 2.1 on
+  https://mcp.teamso.com/v1). They work like personal access tokens: every call runs with the signed-in user's own
+  Teamso rights. The stdio server still asks for a personal access token in `TEAMSO_ACCESS_TOKEN`.
+
 ## 1.3.0
 
 ### Added

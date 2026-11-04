@@ -52,6 +52,8 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const HELP_CACHE_TTL_MS = 10 * 60_000;
 const HELP_RETRY_AFTER_MS = 60_000;
 const ACCESS_TOKEN_PREFIX = 'tms_pat_';
+/** Access token from a browser sign-in (OAuth) on the hosted server, mcp.teamso.com. */
+const OAUTH_TOKEN_PREFIX = 'tms_at_';
 const MIN_PROXY_SECRET_LENGTH = 32;
 const LEAVE_ANSWER_PLACEHOLDER = '-';
 
@@ -266,7 +268,7 @@ export class TeamsoClient {
 
   constructor(accessToken: string, baseUrl?: string, options: TeamsoClientOptions = {}) {
     if (!accessToken) throw new Error('TEAMSO_ACCESS_TOKEN is required');
-    if (!accessToken.startsWith(ACCESS_TOKEN_PREFIX)) {
+    if (!accessToken.startsWith(ACCESS_TOKEN_PREFIX) && !accessToken.startsWith(OAUTH_TOKEN_PREFIX)) {
       throw new Error(`TEAMSO_ACCESS_TOKEN must be a Teamso personal access token (${ACCESS_TOKEN_PREFIX}...)`);
     }
     let trustedProxy: TrustedProxyContext | undefined;

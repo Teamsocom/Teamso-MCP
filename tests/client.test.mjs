@@ -34,6 +34,9 @@ function independentSignature({ timestamp, clientIp, method, pathname }) {
 test('constructor validates the token and the trusted proxy context', () => {
   assert.throws(() => new TeamsoClient(''), /TEAMSO_ACCESS_TOKEN is required/);
   assert.throws(() => new TeamsoClient('eyJhbGciOi.jwt'), /personal access token \(tms_pat_/);
+  assert.throws(() => new TeamsoClient('tms_rt_refresh'), /personal access token \(tms_pat_/);
+  // Browser sign-in access token of the hosted server (TMS-4835)
+  assert.doesNotThrow(() => new TeamsoClient(`tms_at_${'A'.repeat(43)}`, API_BASE));
   assert.throws(
     () => new TeamsoClient(TOKEN, API_BASE, { trustedProxy: { clientIp: 'example.com', sharedSecret: SECRET } }),
     /valid IPv4 or IPv6/,

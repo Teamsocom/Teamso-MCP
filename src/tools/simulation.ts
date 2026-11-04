@@ -302,12 +302,13 @@ export function registerGetSimulationResults(server: McpServer, client: TeamsoCl
         attempt_id: idSchema('Attempt id from a list of this tool: returns that attempt\'s score and feedback.')
           .optional(),
         scope: z.enum(['mine', 'team']).default('mine')
-          .describe('`mine` (default): your own attempts. `team`: the people you may see (managers, admins).'),
+          .describe('`mine` (default): the caller\'s own attempts. `team`: the people the caller may see '
+            + '(managers, admins).'),
         from: z.string().trim().max(10).optional()
           .describe('Team only: first day, `yyyy-MM-dd` (Turkey local time).'),
         to: z.string().trim().max(10).optional().describe('Team only: last day, `yyyy-MM-dd`.'),
-        user_id: idSchema('Team only: one employee\'s attempts (id from `search_employees`).').optional(),
-        scenario_id: idSchema('Only this scenario (id from `list_simulations`).').optional(),
+        user_id: idSchema('Team only: one employee\'s attempts (employee id).').optional(),
+        scenario_id: idSchema('Only this scenario (scenario id).').optional(),
         mode: z.enum(MODES).optional().describe('Team only: `TEXT` (written) or `VOICE` attempts.'),
         result: z.enum(['PASSED', 'FAILED']).optional().describe('Team only: passed or failed attempts.'),
         status: z.enum(ATTEMPT_STATUSES).optional()

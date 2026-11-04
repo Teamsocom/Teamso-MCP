@@ -29,16 +29,15 @@ export function registerSearchHelpArticles(server: McpServer, client: TeamsoClie
     'search_help_articles',
     {
       title: 'Search Teamso help articles',
-      description: 'Search the Teamso user guides (help center: leave, performance, payroll, time '
-        + 'tracking and every other module). Call this first when the user asks how to do '
-        + 'something in Teamso, then read the best match with `get_help_article` and explain '
-        + 'the steps, citing its `url`.',
+      description: 'Search the Teamso user guides (help center: leave, performance, payroll, time tracking '
+        + 'and every other module) and return the matching articles with their ids, titles, summaries and '
+        + 'urls.',
       inputSchema: {
         query: z.string().trim().min(1).max(300)
           .describe('Question or keywords, e.g. "performans hedefi nasıl girilir" or "approve a leave request".'),
         lang: langSchema,
         module: z.string().trim().min(1).max(60).optional()
-          .describe('Only this module folder, e.g. `performance`, `leave`, `payroll` (see `list_help_modules`).'),
+          .describe('Only this module folder, e.g. `performance`, `leave`, `payroll`.'),
         role: z.enum(['ADMIN', 'MANAGER', 'EMPLOYEE']).optional()
           .describe('Only articles written for this role.'),
         limit: z.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT)
@@ -89,7 +88,7 @@ export function registerGetHelpArticle(server: McpServer, client: TeamsoClient):
     {
       title: 'Read a Teamso help article',
       description: 'Return one Teamso help article as Markdown: steps, common problems and related '
-        + 'articles. Get the `id` from `search_help_articles` or `list_help_modules`.',
+        + 'articles.',
       inputSchema: {
         id: z.string().trim().min(3).max(120)
           .describe('Article id `<module>.<article>`, e.g. `performance.goal-entry-employee`.'),
@@ -128,8 +127,8 @@ export function registerListHelpModules(server: McpServer, client: TeamsoClient)
     'list_help_modules',
     {
       title: 'List Teamso help modules',
-      description: 'List the Teamso modules that have user guides, with each module\'s article '
-        + 'titles and ids. Use it to browse when a search finds nothing.',
+      description: 'List the Teamso modules that have user guides, with each module\'s article titles and '
+        + 'ids.',
       inputSchema: {
         lang: langSchema,
       },

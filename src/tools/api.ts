@@ -50,6 +50,12 @@ import {
 } from './schemas.js';
 import { ADDITIVE_WRITE, DESTRUCTIVE_WRITE, READ_ONLY, otpCodeSchema } from './shared.js';
 
+/**
+ * A request body: JSON (object, array or a single value) or plain text for text/* endpoints. Spelled out so the
+ * listed JSON Schema has types (MCP directories flag an untyped parameter).
+ */
+const requestBodySchema = z.union([z.record(z.unknown()), z.array(z.unknown()), z.string(), z.number(), z.boolean()]);
+
 /** Largest file returned as an embedded resource. */
 export const MAX_FILE_BYTES = 8 * 1024 * 1024;
 /** Largest JSON response read from the API (it is then shortened to `MAX_RESULT_CHARS`). */
@@ -74,8 +80,8 @@ const endpointIdSchema = z.string()
   .min(3)
   .max(300)
   .regex(/^(GET|POST|PUT|PATCH|DELETE)\s+\/\S*$/i, 'id must look like "METHOD /path", e.g. "GET /leave/{id}"')
-  .describe('Endpoint id exactly as `find_api_endpoints` returns it: `"METHOD /path/{placeholder}"`, '
-    + 'e.g. `"GET /expense-form/{id}"`. Placeholders stay in the id; their values go in `path_params`.');
+  .describe('Endpoint id: `"METHOD /path/{placeholder}"`, e.g. `"GET /expense-form/{id}"`, with the '
+    + 'placeholders written as they are.');
 
 const pathParamsSchema = z.record(
   z.string().min(1).max(100),
@@ -88,7 +94,7 @@ const querySchema = z.record(
   z.string().min(1).max(100),
   z.union([queryValueSchema, z.array(queryValueSchema).max(100)]),
 ).optional()
-  .describe('Query parameters by name (see `describe_api_endpoint`); arrays repeat the parameter.');
+  .describe('Query parameters by name; arrays repeat the parameter.');
 
 const filesSchema = z.array(z.object({
   field: z.string().trim().min(1).max(100).describe('Multipart field name from the endpoint\'s body schema (e.g. `file`).'),
@@ -98,7 +104,7 @@ const filesSchema = z.array(z.object({
     .describe('MIME type, e.g. `application/pdf` or `image/png`.'),
   base64: z.string().min(1).max(14_500_000).describe('File content, base64 encoded.'),
 })).max(MAX_UPLOAD_FILES).optional()
-  .describe(`Files for multipart endpoints (\`multipart: true\`), at most ${MAX_UPLOAD_FILES} files and 10 MB in total.`);
+  .describe(`Files for multipart endpoints, at most ${MAX_UPLOAD_FILES} files and 10 MB in total.`);
 
 // ------------------------------------------------------------------- hints
 
@@ -139,16 +145,16 @@ export function registerFindApiEndpoints(server: McpServer, client: TeamsoClient
     'find_api_endpoints',
     {
       title: 'Find Teamso API endpoints',
-      description: 'Search the Teamso API endpoints the caller is allowed to use (every module: leave, expenses, '
-        + 'payroll, time tracking, recruiting, inventory, settings...). Use it when no specific Teamso tool fits. '
-        + 'Each result has an `id` ("METHOD /path"), a summary, its side effect (`read`, `write`, `delete`, '
-        + '`read_with_writes`) and whether it needs an SMS code or returns a file. Then call '
-        + '`describe_api_endpoint`. Every word of `query` must match (Turkish-insensitive), so use 1-3 keywords.',
+      description: 'Search the Teamso API endpoints the caller is allowed to use (every module: leave, '
+        + 'expenses, payroll, time tracking, recruiting, inventory, settings...). Each result has an `id` '
+        + '("METHOD /path"), a summary, its side effect (`read`, `write`, `delete`, `read_with_writes`) and '
+        + 'whether it needs an SMS code or returns a file. Every word of `query` must match '
+        + '(Turkish-insensitive).',
       inputSchema: {
         query: z.string().trim().max(200).optional()
           .describe('Keywords matched against path, summary, module and screen names, e.g. "masraf" or "expense form".'),
         module: z.string().trim().min(1).max(60).optional()
-          .describe('Module code from `list_api_modules`, e.g. `LEAVE`, `EXPENSE`, `PAY_SLIP`.'),
+          .describe('Module code, e.g. `LEAVE`, `EXPENSE`, `PAY_SLIP`.'),
         method: z.enum(HTTP_METHODS).optional().describe('Only this HTTP method.'),
         side_effect: z.enum(SIDE_EFFECTS).optional()
           .describe('Only endpoints with this side effect, e.g. `read` for safe lookups.'),
@@ -254,8 +260,8 @@ export function registerListApiModules(server: McpServer, client: TeamsoClient):
     'list_api_modules',
     {
       title: 'List Teamso API modules',
-      description: 'List the Teamso product modules (leave, time tracking, payroll, expenses, recruiting...) with how '
-        + 'many API endpoints the caller can use in each. Use a module `code` to narrow `find_api_endpoints`.',
+      description: 'List the Teamso product modules (leave, time tracking, payroll, expenses, '
+        + 'recruiting...) with their codes and how many API endpoints the caller can use in each.',
       inputSchema: { lang: langSchema },
       outputSchema: apiModulesOutputSchema,
       annotations: READ_ONLY,
@@ -300,9 +306,9 @@ export function registerDescribeApiEndpoint(server: McpServer, client: TeamsoCli
     'describe_api_endpoint',
     {
       title: 'Describe a Teamso API endpoint',
-      description: 'Show how to call one Teamso API endpoint the caller may use: path and query parameters, the '
-        + 'JSON Schema of the request body, response kind (JSON or file), side effect, SMS-code requirement and '
-        + 'notes, plus ready-made example arguments for `call_api_read` (reads) or `call_api_write` (changes).',
+      description: 'Describe one Teamso API endpoint the caller may use: path and query parameters, the '
+        + 'JSON Schema of the request body, response kind (JSON or file), side effect, SMS-code requirement '
+        + 'and notes, with example arguments.',
       inputSchema: {
         id: endpointIdSchema,
         lang: langSchema,
@@ -395,10 +401,9 @@ export function registerCallApiRead(server: McpServer, client: TeamsoClient): vo
     'call_api_read',
     {
       title: 'Read data through the Teamso API',
-      description: 'Call a Teamso API endpoint whose side effect is `read` (from `find_api_endpoints` / '
-        + '`describe_api_endpoint`) and return its data. The request is marked read-only, so Teamso refuses '
-        + 'anything that would change data; endpoints that write are refused here (use `call_api_write`). Large '
-        + 'lists are shortened with `truncated: true`; files (PDF, Excel, CSV, images) come back as an embedded '
+      description: 'Call a Teamso API endpoint whose side effect is `read` and return its data. The request '
+        + 'is marked read-only, so Teamso refuses anything that would change data. Large lists are '
+        + 'shortened with `truncated: true`; files (PDF, Excel, CSV, images) come back as an embedded '
         + 'resource (up to 8 MB). Runs with the caller\'s own Teamso permissions.',
       inputSchema: {
         id: endpointIdSchema.optional(),
@@ -407,8 +412,8 @@ export function registerCallApiRead(server: McpServer, client: TeamsoClient): vo
           .describe('Catalog path pattern with placeholders (e.g. `/leave/{id}`), with `method`, instead of `id`.'),
         path_params: pathParamsSchema,
         query: querySchema,
-        body: z.unknown().optional()
-          .describe('Only for reads sent as POST (the filter goes in the body); see `describe_api_endpoint`.'),
+        body: requestBodySchema.optional()
+          .describe('Request body, only for reads sent as POST (the filter goes in the body).'),
         lang: langSchema,
       },
       outputSchema: apiReadOutputSchema,
@@ -460,25 +465,24 @@ export function registerCallApiWrite(server: McpServer, client: TeamsoClient): v
     'call_api_write',
     {
       title: 'Change data through the Teamso API',
-      description: 'Create, update, approve or delete something through a Teamso API endpoint from '
-        + '`find_api_endpoints` (side effect `write`, `delete` or `read_with_writes`). Without `confirm` it only '
-        + 'returns a PREVIEW (resolved request, body checked against the endpoint\'s JSON Schema, warnings, SMS-code '
-        + 'need) and sends nothing. Show the preview to the user; only after they explicitly confirm, call again '
-        + 'with the same arguments and `confirm: true`. Endpoints that need an SMS code also need `otp_code` '
-        + '(see `request_sms_code`). Runs with the caller\'s own Teamso permissions.',
+      description: 'Create, update, approve or delete something through a Teamso API endpoint (side effect '
+        + '`write`, `delete` or `read_with_writes`). Without `confirm: true` it only returns a preview '
+        + '(resolved request, body checked against the endpoint\'s JSON Schema, warnings, SMS-code need) '
+        + 'and sends nothing; with `confirm: true` it sends the request. Endpoints that need an SMS code '
+        + 'also need `otp_code`. Runs with the caller\'s own Teamso permissions.',
       inputSchema: {
         id: endpointIdSchema,
         path_params: pathParamsSchema,
         query: querySchema,
-        body: z.unknown().optional()
+        body: requestBodySchema.optional()
           .describe('Request body: JSON matching the endpoint\'s body schema. For multipart endpoints, an object of '
             + 'the non-file form fields.'),
         files: filesSchema,
         confirm: z.boolean().default(false)
-          .describe('false (default): preview only, nothing is sent. true: run it, only after the user explicitly '
-            + 'confirmed the preview.'),
+          .describe('false (default): preview only, nothing is sent. true: send the request.'),
         otp_code: otpCodeSchema.optional()
-          .describe('SMS verification code from `request_sms_code`, for endpoints that need one (valid for 3 minutes).'),
+          .describe('SMS verification code sent to the caller\'s phone, for endpoints that need one (valid '
+            + 'for 3 minutes).'),
         lang: langSchema,
       },
       outputSchema: apiWriteOutputSchema,
@@ -581,11 +585,10 @@ export function registerRequestSmsCode(server: McpServer, client: TeamsoClient):
     'request_sms_code',
     {
       title: 'Send an SMS verification code',
-      description: 'Send a 6-digit SMS verification code to the caller\'s phone, for API endpoints that need one '
-        + '(`smsCodeRequired` in `find_api_endpoints`, e.g. expense finalisation, payslip approval, overtime '
-        + 'conversion). The code is valid for 3 minutes, a new code invalidates the previous one, and each SMS uses '
-        + 'company digital credit, so call it only after the user confirmed the action. Then ask the user for the '
-        + 'code and pass it as `otp_code` to `call_api_write`. (`request_leave_otp` does the same for leave tools.)',
+      description: 'Send a 6-digit SMS verification code to the caller\'s phone, for Teamso actions '
+        + 'protected by an SMS code (e.g. expense finalisation, payslip approval, overtime conversion). The '
+        + 'code is valid for 3 minutes, a new code invalidates the previous one, and each SMS uses company '
+        + 'digital credit.',
       inputSchema: {},
       outputSchema: otpOutputSchema,
       annotations: ADDITIVE_WRITE,
