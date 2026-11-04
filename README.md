@@ -4,7 +4,7 @@
 
 # Teamso MCP Server
 
-**Official [MCP](https://modelcontextprotocol.io/) server for [Teamso](https://teamso.com/)**: request leave, handle approvals, find colleagues, manage performance goals, read payslips, search the Teamso help center and reach every other Teamso module through permission-checked generic API tools, from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant.
+**Official [MCP](https://modelcontextprotocol.io/) server for [Teamso](https://teamso.com/)**: request leave, handle approvals, find colleagues, manage performance goals, give recognition badges, follow AI Simulation practice and results, read payslips, search the Teamso help center and reach every other Teamso module through permission-checked generic API tools, from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant.
 
 [![npm](https://img.shields.io/badge/npm-@teamso/teamso--mcp-1a56db?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/package/@teamso/teamso-mcp)
 [![MCP](https://img.shields.io/badge/MCP-compatible-333?style=for-the-badge)](https://modelcontextprotocol.io/)
@@ -208,6 +208,17 @@ TEAMSO_ACCESS_TOKEN=tms_pat_your-token
 | `give_badge` | Give a badge with a message to one or more colleagues, with your own Teamso rights and limits |
 | `list_my_badges` | The badges you have received, who gave them and when |
 
+### AI Simulation
+
+| Tool | Description |
+|------|-------------|
+| `list_simulation_assignments` | Your assigned AI Simulation practice (open ones by default), due date, status, best score and attempts left |
+| `get_simulation_results` | Your attempts with score and result, your team's with `scope: "team"`, or one attempt's criteria and feedback (never the transcript) |
+| `list_simulations` | The scenario catalog with sector, modes, difficulty, persona, your best score and assignment |
+
+The conversation itself happens in the Teamso web app
+([/dashboard/simulation](https://teamso.com/dashboard/simulation)); no tool starts one.
+
 ### Communication
 
 | Tool | Description |
@@ -240,6 +251,9 @@ Approval chain:
 
 Goal chain:
 `list_performance_periods → list_my_goals → create_user_goal → send_goals_to_approval`
+
+AI Simulation chain:
+`list_simulation_assignments → (practise in the web app) → get_simulation_results → get_simulation_results attempt_id`
 
 Everything else (expenses, overtime, time tracking, payroll, recruiting,
 inventory, documents, settings...):
@@ -306,6 +320,7 @@ tools a server offers, as a comma-separated list. Default: all tools.
 | `employees` | `search_employees`, `get_employee_profile` |
 | `performance` | the ten goal and evaluation tools |
 | `badges` | `list_badges`, `give_badge`, `list_my_badges` |
+| `simulation` | `list_simulation_assignments`, `get_simulation_results`, `list_simulations` |
 | `communication` | `list_announcements` |
 | `payroll` | `list_my_payslips`, `get_payslip_pdf` |
 | `api` | `find_api_endpoints`, `list_api_modules`, `describe_api_endpoint`, `call_api_read`, `call_api_write`, `request_sms_code` |
@@ -426,7 +441,7 @@ const client = new TeamsoClient(userToken, 'https://api.teamso.com/v1', {
 
 | Export | Description |
 |--------|-------------|
-| `createMcpServer(client, options?)` | Creates an McpServer with all 37 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
+| `createMcpServer(client, options?)` | Creates an McpServer with all 40 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
 | `TeamsoClient` | Teamso REST client (personal access token, envelope handling, optional trusted-proxy signing) |
 | `TeamsoApiError` | Error with `status`, `messageCode`, `apiMessage` and the response `body` |
 | `registerTools(server, client, options?)` | Register the tools (optionally only some `toolsets`) on an existing McpServer |
@@ -455,7 +470,7 @@ import { registerPrompts, PROMPT_NAMES } from '@teamso/teamso-mcp/prompts';
 | `TEAMSO_API_BASE_URL` | No | Override the API base URL (default: `https://api.teamso.com/v1`) |
 | `TEAMSO_HELP_BASE_URL` | No | Site the help articles are downloaded from (default: `https://teamso.com`) |
 | `TEAMSO_HELP_PUBLIC_URL` | No | Public site used for help links and images in tool output (default: `TEAMSO_HELP_BASE_URL`). Set it when the download address is internal |
-| `TEAMSO_TOOLSETS` | No | Comma-separated toolsets to serve: `core`, `help`, `leave`, `approvals`, `employees`, `performance`, `badges`, `communication`, `payroll`, `api` (default: all) |
+| `TEAMSO_TOOLSETS` | No | Comma-separated toolsets to serve: `core`, `help`, `leave`, `approvals`, `employees`, `performance`, `badges`, `simulation`, `communication`, `payroll`, `api` (default: all) |
 
 ## Self-hosting from source
 

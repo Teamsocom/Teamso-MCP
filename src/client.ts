@@ -33,6 +33,10 @@ import type {
   TeamsoPendingTransaction,
   TeamsoPerformanceSettings,
   TeamsoPublicHolidayCalendar,
+  TeamsoSimulationAssignment,
+  TeamsoSimulationAttemptPage,
+  TeamsoSimulationAttemptResult,
+  TeamsoSimulationCatalog,
   TeamsoUser,
   TeamsoUserPage,
   TeamsoUserSummary,
@@ -579,6 +583,74 @@ export class TeamsoClient {
       query: { page: params.page ?? 0, size: params.size ?? 20 },
       signal,
     });
+  }
+
+  // ------------------------------------------------------------- simulation
+
+  /** The caller's own AI Simulation assignments (`GET /simulation/assignments/mine`). */
+  async listMySimulationAssignments(signal?: AbortSignal): Promise<TeamsoSimulationAssignment[]> {
+    return asArray(await this.call<TeamsoSimulationAssignment[]>('GET', '/simulation/assignments/mine', { signal }));
+  }
+
+  /** The caller's own attempts, newest first. `page` starts at 0. */
+  async listMySimulationAttempts(
+    params: { page?: number; size?: number; status?: string; scenarioId?: string } = {},
+    signal?: AbortSignal,
+  ): Promise<TeamsoSimulationAttemptPage> {
+    return this.call<TeamsoSimulationAttemptPage>('GET', '/simulation/attempts/mine', {
+      query: {
+        page: params.page ?? 0,
+        size: params.size ?? 20,
+        status: params.status,
+        scenarioId: params.scenarioId,
+      },
+      signal,
+    });
+  }
+
+  /**
+   * Attempts of the people the caller may see (managers: their team, simulation admins: everyone).
+   * `from` and `to` are `yyyy-MM-dd`; `page` starts at 0.
+   */
+  async listSimulationAttempts(
+    params: {
+      from?: string;
+      to?: string;
+      userId?: string;
+      scenarioId?: string;
+      mode?: string;
+      result?: string;
+      page?: number;
+      size?: number;
+    } = {},
+    signal?: AbortSignal,
+  ): Promise<TeamsoSimulationAttemptPage> {
+    return this.call<TeamsoSimulationAttemptPage>('GET', '/simulation/attempts', {
+      query: {
+        from: params.from,
+        to: params.to,
+        userId: params.userId,
+        scenarioId: params.scenarioId,
+        mode: params.mode,
+        result: params.result,
+        page: params.page ?? 0,
+        size: params.size ?? 20,
+      },
+      signal,
+    });
+  }
+
+  /** Score and feedback of one attempt. The response may carry the transcript (`attempt.turns`); never pass it on. */
+  async getSimulationAttemptResult(attemptId: string, signal?: AbortSignal): Promise<TeamsoSimulationAttemptResult> {
+    return this.call<TeamsoSimulationAttemptResult>('GET', `/simulation/attempts/${segment(attemptId)}/result`, { signal });
+  }
+
+  /** The scenario catalog on shelves (`GET /simulation/catalog`). */
+  async getSimulationCatalog(
+    params: { query?: string; sector?: string; mode?: string; difficulty?: string; language?: string } = {},
+    signal?: AbortSignal,
+  ): Promise<TeamsoSimulationCatalog> {
+    return this.call<TeamsoSimulationCatalog>('GET', '/simulation/catalog', { query: { ...params }, signal });
   }
 
   // ---------------------------------------------------------- communication

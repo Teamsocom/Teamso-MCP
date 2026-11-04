@@ -40,6 +40,11 @@ import {
   registerUpdateGoalActualValue,
   registerUpdateManagerActualValue,
 } from './performance.js';
+import {
+  registerGetSimulationResults,
+  registerListSimulationAssignments,
+  registerListSimulations,
+} from './simulation.js';
 
 type ToolRegistrar = (server: McpServer, client: TeamsoClient) => void;
 
@@ -77,6 +82,9 @@ const REGISTRARS = {
   list_badges: registerListBadges,
   give_badge: registerGiveBadge,
   list_my_badges: registerListMyBadges,
+  list_simulation_assignments: registerListSimulationAssignments,
+  get_simulation_results: registerGetSimulationResults,
+  list_simulations: registerListSimulations,
   list_announcements: registerListAnnouncements,
   list_my_payslips: registerListMyPayslips,
   get_payslip_pdf: registerGetPayslipPdf,
@@ -123,6 +131,7 @@ export const TOOLSETS = Object.freeze({
     'approve_goal_evaluation',
   ]),
   badges: Object.freeze(['list_badges', 'give_badge', 'list_my_badges']),
+  simulation: Object.freeze(['list_simulation_assignments', 'get_simulation_results', 'list_simulations']),
   communication: Object.freeze(['list_announcements']),
   payroll: Object.freeze(['list_my_payslips', 'get_payslip_pdf']),
   api: Object.freeze([
@@ -224,6 +233,9 @@ export {
   registerListBadges,
   registerGiveBadge,
   registerListMyBadges,
+  registerListSimulationAssignments,
+  registerGetSimulationResults,
+  registerListSimulations,
   registerListAnnouncements,
   registerListMyPayslips,
   registerGetPayslipPdf,
