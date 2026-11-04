@@ -12,8 +12,8 @@ export function registerListMyPayslips(server: McpServer, client: TeamsoClient):
     'list_my_payslips',
     {
       title: 'List my payslips',
-      description: 'List the caller\'s own e-payslips (newest term first) with their status and any '
-        + 'objection answers. Open one with `get_payslip_pdf`.',
+      description: 'List the caller\'s own e-payslips (newest term first) with their ids, status and any '
+        + 'objection answers.',
       inputSchema: {
         term: z.string().trim().regex(/^\d{4}(-\d{2})?$/, 'term must be `yyyy` or `yyyy-MM`').optional()
           .describe('Only this payroll term: a month `yyyy-MM` or a whole year `yyyy`.'),
@@ -62,10 +62,10 @@ export function registerGetPayslipPdf(server: McpServer, client: TeamsoClient): 
     'get_payslip_pdf',
     {
       title: 'Get a payslip PDF',
-      description: 'Download one of the caller\'s payslips as a PDF, returned as an embedded '
-        + '`application/pdf` resource. Payslips contain salary data: show them only to their owner.',
+      description: 'Download one of the caller\'s own payslips as a PDF, returned as an embedded '
+        + '`application/pdf` resource. Payslips contain salary data.',
       inputSchema: {
-        payslip_id: idSchema('Payslip id from `list_my_payslips`.'),
+        payslip_id: idSchema('Id of one of the caller\'s own payslips.'),
       },
       outputSchema: payslipPdfOutputSchema,
       annotations: READ_ONLY,

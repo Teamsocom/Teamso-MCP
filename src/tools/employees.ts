@@ -18,10 +18,9 @@ export function registerSearchEmployees(server: McpServer, client: TeamsoClient)
     'search_employees',
     {
       title: 'Search employees',
-      description: 'Find active colleagues by name or email (Turkish characters optional: "ozturk" '
-        + 'finds "Öztürk"). Uses the company directory when the caller may read it (`PEOPLE_READ`), '
-        + 'otherwise the employees the caller is responsible for. Use the `id` with '
-        + '`get_employee_profile` or as `user_id` in the performance tools.',
+      description: 'Find active colleagues by name or email (Turkish characters optional: "ozturk" finds '
+        + '"Öztürk") and return their ids. Uses the company directory when the caller may read it '
+        + '(`PEOPLE_READ`), otherwise the employees the caller is responsible for.',
       inputSchema: {
         query: z.string().trim().min(2).max(100).describe('Name, surname or email to look for.'),
         limit: z.number().int().min(1).max(50).default(10).describe('Maximum results (1-50, default 10).'),
@@ -105,7 +104,7 @@ export function registerGetEmployeeProfile(server: McpServer, client: TeamsoClie
       description: 'Return a colleague\'s work profile: branch, department, position, manager, work '
         + 'location and contact details (the phone number is masked unless the caller may read it).',
       inputSchema: {
-        user_id: idSchema('Employee id from `search_employees`.'),
+        user_id: idSchema('Employee id.'),
       },
       outputSchema: employeeProfileOutputSchema,
       annotations: READ_ONLY,

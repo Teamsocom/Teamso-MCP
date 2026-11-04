@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.3
+
+### Changed
+
+- Tool and parameter descriptions only say what each tool does, returns and requires. Pointers to other tools and
+  the "confirm with the user first" guidance moved to the server instructions sent in `initialize`, as the Claude
+  Connectors Directory asks. Tool behaviour is unchanged.
+
 ## 1.3.2
 
 ### Fixed

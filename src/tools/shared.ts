@@ -28,7 +28,8 @@ export const DESTRUCTIVE_WRITE: ToolAnnotations = {
 export const otpCodeSchema = z.string()
   .trim()
   .regex(/^\d{4,8}$/, 'otp_code must be the numeric code from the SMS')
-  .describe('The SMS verification code the user received after `request_leave_otp` (valid for 3 minutes).');
+  .describe('The 6-digit SMS verification code sent to the caller\'s phone for leave requests (valid for 3 '
+    + 'minutes).');
 
 export const leaveDateSchema = (edge: 'start' | 'end') => z.string()
   .trim()
@@ -54,7 +55,7 @@ export const periodSchema = z.string()
   .trim()
   .min(1)
   .max(200)
-  .describe('Performance period title exactly as returned by `list_performance_periods` (e.g. "Q4 2026").');
+  .describe('Performance period title exactly as Teamso lists it (e.g. "Q4 2026").');
 
 export const GOAL_STATUSES = [
   'PENDING',

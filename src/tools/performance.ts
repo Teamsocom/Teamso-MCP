@@ -112,9 +112,9 @@ export function registerListMyGoals(server: McpServer, client: TeamsoClient): vo
     'list_my_goals',
     {
       title: 'List my goals',
-      description: 'List the caller\'s own goals in a performance period with status, weight, target '
-        + 'and actual values, and what the caller can do next (`canEnterActualValue`). `canAddGoal` '
-        + 'tells whether `create_user_goal` is allowed for the caller now.',
+      description: 'List the caller\'s own goals in a performance period with ids, status, weight, target '
+        + 'and actual values. `canEnterActualValue` and `canAddGoal` tell whether the caller may enter an '
+        + 'actual value or add a goal now.',
       inputSchema: {
         period: periodSchema,
       },
@@ -160,9 +160,8 @@ export function registerListTeamGoals(server: McpServer, client: TeamsoClient): 
     {
       title: 'List my team\'s goals',
       description: 'List the goals of the employees the caller manages or assigned goals to, in a '
-        + 'performance period (drafts are not shown). Each goal tells what the caller can do: '
-        + '`canApproveGoal` (`approve_goal`), `canReviseGoal` (`revise_and_approve_goal`) and '
-        + '`canApproveEvaluation` (`approve_goal_evaluation`).',
+        + 'performance period (drafts are not shown). Each goal carries `canApproveGoal`, `canReviseGoal` '
+        + 'and `canApproveEvaluation`, which tell what the caller may do with it.',
       inputSchema: {
         period: periodSchema,
         status: z.enum(GOAL_STATUSES).optional().describe('Only goals in this status.'),
@@ -211,11 +210,9 @@ export function registerCreateUserGoal(server: McpServer, client: TeamsoClient):
     'create_user_goal',
     {
       title: 'Create a personal goal',
-      description: 'Create a personal goal in a performance period for the caller, or for a direct '
-        + 'report (`user_id`; performance admins may set goals for anyone). The goal starts as a '
-        + 'draft (`PENDING`); send it with '
-        + '`send_goals_to_approval`. Check `canAddGoal` from `list_my_goals` / `list_team_goals` and '
-        + 'keep the weights of a person\'s goals at 100 in total.',
+      description: 'Create a personal goal in a performance period for the caller, or for a direct report '
+        + '(`user_id`; performance admins may set goals for anyone). The goal starts as a draft '
+        + '(`PENDING`). Teamso expects the weights of a person\'s goals to total 100.',
       inputSchema: {
         period: periodSchema,
         name: z.string().trim().min(1).max(255).describe('Goal title.'),
@@ -230,8 +227,8 @@ export function registerCreateUserGoal(server: McpServer, client: TeamsoClient):
         other_text: z.string().trim().max(1000).optional()
           .describe('Expected outcome, required for `OTHER` goals.'),
         description: z.string().trim().max(2000).optional().describe('Details of the goal.'),
-        user_id: idSchema('Goal owner; defaults to the caller. Another employee must report to the caller '
-          + 'directly. Use an id from `search_employees`.').optional(),
+        user_id: idSchema('Goal owner\'s employee id; defaults to the caller. Another employee must report '
+          + 'to the caller directly.').optional(),
       },
       outputSchema: goalOutputSchema,
       annotations: ADDITIVE_WRITE,
@@ -310,7 +307,7 @@ export function registerSendGoalsToApproval(server: McpServer, client: TeamsoCli
         + 'goals in the list are ignored.',
       inputSchema: {
         goal_ids: z.array(idSchema('Goal id.')).min(1).max(100)
-          .describe('Ids of the caller\'s draft goals, from `list_my_goals`.'),
+          .describe('Ids of the caller\'s draft goals.'),
       },
       outputSchema: goalsSentOutputSchema,
       annotations: ADDITIVE_WRITE,
@@ -336,10 +333,9 @@ export function registerApproveGoal(server: McpServer, client: TeamsoClient): vo
     'approve_goal',
     {
       title: 'Approve a goal',
-      description: 'Approve a goal waiting for the caller\'s approval (`canApproveGoal` in '
-        + '`list_team_goals`) without changes. Use `revise_and_approve_goal` to change it first.',
+      description: 'Approve, without changes, a goal waiting for the caller\'s approval (`canApproveGoal`).',
       inputSchema: {
-        goal_id: idSchema('Goal id from `list_team_goals`.'),
+        goal_id: idSchema('Id of a goal of an employee the caller manages.'),
       },
       outputSchema: goalOutputSchema,
       annotations: ADDITIVE_WRITE,
@@ -363,7 +359,7 @@ export function registerReviseAndApproveGoal(server: McpServer, client: TeamsoCl
       description: 'Change a goal waiting for the caller\'s approval (`canReviseGoal`) and approve it '
         + 'in one step. Only the fields given are changed; the employee sees the revision.',
       inputSchema: {
-        goal_id: idSchema('Goal id from `list_team_goals`.'),
+        goal_id: idSchema('Id of a goal of an employee the caller manages.'),
         name: z.string().trim().min(1).max(255).optional().describe('New goal title.'),
         description: z.string().trim().max(2000).optional().describe('New details.'),
         weight: z.number().gt(0).max(100).optional().describe('New weight in percent.'),
@@ -405,7 +401,7 @@ export function registerUpdateGoalActualValue(server: McpServer, client: TeamsoC
         + '(`canEnterActualValue`). Send `actual_value` for numeric goals or `actual_text` for '
         + '`OTHER` goals.',
       inputSchema: {
-        goal_id: idSchema('Goal id from `list_my_goals`.'),
+        goal_id: idSchema('Id of one of the caller\'s own goals.'),
         actual_value: z.number().optional().describe('Achieved numeric value.'),
         actual_text: z.string().trim().min(1).max(2000).optional().describe('Achieved outcome for `OTHER` goals.'),
       },
@@ -436,11 +432,11 @@ export function registerUpdateManagerActualValue(server: McpServer, client: Team
     'update_manager_actual_value',
     {
       title: 'Enter the manager\'s actual value for a goal',
-      description: 'As the employee\'s direct manager or an admin, enter the achieved value you assess '
-        + 'for the employee\'s goal during evaluation. Send `value` for numeric goals or `text` for '
-        + '`OTHER` goals.',
+      description: 'Record the manager\'s assessed achieved value for an employee\'s goal during evaluation '
+        + '(the caller must be the employee\'s direct manager or an admin). Numeric goals take `value`, '
+        + '`OTHER` goals take `text`.',
       inputSchema: {
-        goal_id: idSchema('Goal id from `list_team_goals`.'),
+        goal_id: idSchema('Id of a goal of an employee the caller manages.'),
         value: z.number().optional().describe('Achieved numeric value in the manager\'s assessment.'),
         text: z.string().trim().min(1).max(2000).optional().describe('Assessment for `OTHER` goals.'),
       },
@@ -471,12 +467,11 @@ export function registerApproveGoalEvaluation(server: McpServer, client: TeamsoC
     'approve_goal_evaluation',
     {
       title: 'Approve an employee\'s goal evaluation',
-      description: 'Approve the goal evaluation of one employee for a period at the caller\'s approval '
-        + 'step (`canApproveEvaluation` in `list_team_goals`). When it is the last step Teamso '
-        + 'computes the final score.',
+      description: 'Approve the goal evaluation of one employee for a period at the caller\'s approval step '
+        + '(`canApproveEvaluation`). When it is the last step Teamso computes the final score.',
       inputSchema: {
         period: periodSchema,
-        user_id: idSchema('Employee id (the goal owner `userId` in `list_team_goals`).'),
+        user_id: idSchema('Employee id of the goal owner (`userId`).'),
       },
       outputSchema: evaluationApprovalOutputSchema,
       annotations: ADDITIVE_WRITE,
