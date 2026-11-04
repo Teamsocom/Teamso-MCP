@@ -40,7 +40,7 @@ export function registerListPendingApprovals(server: McpServer, client: TeamsoCl
     {
       title: 'List leave requests waiting for my approval',
       description: 'List the leave requests that are waiting for the caller\'s decision as the current '
-        + 'approver. Decide each one with `approve_or_reject_leave` after the user confirms.',
+        + 'approver.',
       inputSchema: {},
       outputSchema: pendingApprovalsOutputSchema,
       annotations: READ_ONLY,
@@ -90,11 +90,10 @@ export function registerApproveOrRejectLeave(server: McpServer, client: TeamsoCl
     'approve_or_reject_leave',
     {
       title: 'Approve or reject a leave request',
-      description: 'Record the caller\'s decision on a leave request waiting for their approval. The '
-        + 'request must appear in `list_pending_approvals`. Rejecting needs a `reason`, which the '
-        + 'employee sees. The decision cannot be undone, so confirm it with the user first.',
+      description: 'Record the caller\'s decision on a leave request waiting for their approval. Rejecting '
+        + 'needs a `reason`, which the employee sees. The decision cannot be undone.',
       inputSchema: {
-        leave_id: idSchema('Leave request id from `list_pending_approvals`.'),
+        leave_id: idSchema('Id of a leave request waiting for the caller\'s approval.'),
         approve: z.boolean().describe('`true` to approve, `false` to reject.'),
         reason: z.string().trim().max(500).optional()
           .describe('Required when rejecting: the reason shown to the employee.'),

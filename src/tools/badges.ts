@@ -158,10 +158,10 @@ export function registerListBadges(server: McpServer, client: TeamsoClient): voi
     'list_badges',
     {
       title: 'List the badges I can give',
-      description: 'List the recognition badges the caller can give now, with the caller\'s giving role '
-        + '(`ADMIN` gives to anyone, `MANAGER` to direct reports, `PEER` to one colleague within a monthly quota, '
-        + '`NONE`), whether each badge needs a message or an approval, and the peer quota left. Use a badge\'s '
-        + '`id` (or its exact name) with `give_badge`.',
+      description: 'List the recognition badges the caller can give now, with their ids and names, the '
+        + 'caller\'s giving role (`ADMIN` gives to anyone, `MANAGER` to direct reports, `PEER` to one '
+        + 'colleague within a monthly quota, `NONE`), whether each badge needs a message or an approval, '
+        + 'and the peer quota left.',
       inputSchema: {
         query: z.string().trim().min(1).max(100).optional()
           .describe('Only badges whose name contains these words (Turkish characters optional).'),
@@ -228,15 +228,14 @@ export function registerGiveBadge(server: McpServer, client: TeamsoClient): void
     'give_badge',
     {
       title: 'Give a badge',
-      description: 'Give a recognition badge to one or more colleagues with a message, with the caller\'s own '
-        + 'Teamso rights and limits (the same as the web: who may give what to whom, per-person limit, waiting '
-        + 'days, approval, monthly peer quota). Find people with `search_employees` and badges with `list_badges`. '
-        + 'Confirm the badge, the people and the message with the user first. People who cannot get the badge are '
-        + 'listed with the reason; the others still get it. A badge that needs approval waits for a badge admin.',
+      description: 'Give a recognition badge to one or more colleagues with a message, with the caller\'s '
+        + 'own Teamso rights and limits (the same as the web: who may give what to whom, per-person limit, '
+        + 'waiting days, approval, monthly peer quota). People who cannot get the badge are listed with the '
+        + 'reason; the others still get it. A badge that needs approval waits for a badge admin.',
       inputSchema: {
         badge: z.string().trim().min(1).max(100)
-          .describe('Badge id from `list_badges`, or the badge\'s exact name (e.g. "Takım Oyuncusu").'),
-        recipient_ids: z.array(idSchema('Employee id from `search_employees`.')).min(1).max(RECIPIENTS_MAX)
+          .describe('Badge id, or the badge\'s exact name (e.g. "Takım Oyuncusu").'),
+        recipient_ids: z.array(idSchema('Employee id.')).min(1).max(RECIPIENTS_MAX)
           .describe(`Ids of the people who get the badge (1-${RECIPIENTS_MAX}). A peer recognition goes to one person.`),
         message: z.string().trim().max(MESSAGE_MAX).optional()
           .describe(`Why they get it, shown with the badge (${MESSAGE_MIN}-${MESSAGE_MAX} characters; required `

@@ -75,7 +75,7 @@ const OTP_HINTS: ApiErrorHints = {
 };
 
 const leaveRequestInput = {
-  leave_type_id: idSchema('Leave type id from `list_leave_types`.'),
+  leave_type_id: idSchema('Leave type id (the `id` of a leave type in the caller\'s policy).'),
   start: leaveDateSchema('start'),
   end: leaveDateSchema('end'),
 };
@@ -85,9 +85,9 @@ export function registerListLeaveTypes(server: McpServer, client: TeamsoClient):
     'list_leave_types',
     {
       title: 'List the leave types I can request',
-      description: 'List the leave types in the caller\'s leave policy with the remaining balance '
-        + '(`remainingDays`) and the rules of each type (per-request limits, document or '
-        + 'description requirements). Use the `id` as `leave_type_id` in the other leave tools.',
+      description: 'List the leave types in the caller\'s leave policy with their ids, the remaining '
+        + 'balance (`remainingDays`) and the rules of each type (per-request limits, document or '
+        + 'description requirements).',
       inputSchema: {},
       outputSchema: leaveTypesOutputSchema,
       annotations: READ_ONLY,
@@ -150,10 +150,9 @@ export function registerCalculateLeaveDays(server: McpServer, client: TeamsoClie
     'calculate_leave_days',
     {
       title: 'Calculate leave days',
-      description: 'Count the working days a leave request would use (weekends, holidays and the '
-        + 'caller\'s shift are applied by Teamso), show the return-to-work date and run Teamso\'s '
-        + 'pre-check. Call it before `request_leave_otp` and confirm the numbers with the user. '
-        + 'Dates are Turkey local time.',
+      description: 'Count the working days a leave request would use (weekends, holidays and the caller\'s '
+        + 'shift are applied by Teamso), with the return-to-work date and the result of Teamso\'s '
+        + 'pre-check. Creates nothing. Dates are Turkey local time.',
       inputSchema: leaveRequestInput,
       outputSchema: leaveCalculationOutputSchema,
       annotations: READ_ONLY,
@@ -210,9 +209,8 @@ export function registerRequestLeaveOtp(server: McpServer, client: TeamsoClient)
     {
       title: 'Send a leave SMS verification code',
       description: 'Send a 6-digit SMS verification code to the caller\'s phone. Teamso requires it to '
-        + 'create or cancel a leave request. The code is valid for 3 minutes, a new code invalidates '
-        + 'the previous one, and each SMS uses company digital credit, so only call it once the user '
-        + 'has confirmed the request. Then ask the user for the code.',
+        + 'create or cancel a leave request. The code is valid for 3 minutes, a new code invalidates the '
+        + 'previous one, and each SMS uses company digital credit.',
       inputSchema: {},
       outputSchema: otpOutputSchema,
       annotations: ADDITIVE_WRITE,
@@ -249,10 +247,9 @@ export function registerCreateLeaveRequest(server: McpServer, client: TeamsoClie
     'create_leave_request',
     {
       title: 'Create a leave request',
-      description: 'Create a leave request for the caller and send it into the approval chain. Requires '
-        + 'the SMS code from `request_leave_otp`. Teamso recounts the working days and runs its '
-        + 'pre-check before the code is used. Only call this after the user confirmed the type, '
-        + 'dates and day count (see `calculate_leave_days`).',
+      description: 'Create a leave request for the caller and send it into the approval chain. Requires the '
+        + 'SMS verification code sent to the caller\'s phone. Teamso recounts the working days and runs its '
+        + 'pre-check before the code is used.',
       inputSchema: {
         ...leaveRequestInput,
         description: z.string().trim().max(1000).optional()
@@ -375,10 +372,10 @@ export function registerCancelLeaveRequest(server: McpServer, client: TeamsoClie
     {
       title: 'Cancel my leave request',
       description: 'Cancel (delete) one of the caller\'s own leave requests. This cannot be undone. '
-        + 'Requires the SMS code from `request_leave_otp` and the `LEAVE_DELETE` permission. '
-        + 'Confirm the leave with the user first (`list_my_leaves`).',
+        + 'Requires the SMS verification code sent to the caller\'s phone and the `LEAVE_DELETE` '
+        + 'permission.',
       inputSchema: {
-        leave_id: idSchema('Leave request id from `list_my_leaves`.'),
+        leave_id: idSchema('Id of one of the caller\'s own leave requests.'),
         otp_code: otpCodeSchema,
       },
       outputSchema: leaveCancelledOutputSchema,

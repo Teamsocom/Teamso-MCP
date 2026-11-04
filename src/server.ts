@@ -48,14 +48,22 @@ export const DEFAULT_INSTRUCTIONS = [
     + 'Dates are Turkey local time (yyyy-MM-dd or yyyy-MM-dd HH:mm).',
   'Prompts: request_leave and review_pending_approvals walk through these flows.',
   'Approvals: list_pending_approvals → approve_or_reject_leave (a rejection needs a reason).',
-  'Goals use the period title from list_performance_periods.',
+  'Ids: leave_type_id comes from list_leave_types, leave ids from list_my_leaves or list_pending_approvals, '
+    + 'employee ids from search_employees, badge ids from list_badges, payslip ids from list_my_payslips. '
+    + 'get_me lists the user\'s permission codes (e.g. LEAVE_ADD, LEAVE_DELETE).',
+  'Goals use the period title from list_performance_periods. create_user_goal makes a draft (check canAddGoal in '
+    + 'list_my_goals first and keep a person\'s weights at 100), send_goals_to_approval sends drafts. In '
+    + 'list_team_goals, canApproveGoal means approve_goal (or revise_and_approve_goal to change it first) and '
+    + 'canApproveEvaluation means approve_goal_evaluation.',
+  'Payslips contain salary data: show them only to their owner (list_my_payslips, then get_payslip_pdf).',
+  'If search_help_articles finds nothing, browse with list_help_modules.',
   'Badges ("rozet", "takdir"): search_employees for the people, list_badges for what the user may give, confirm the '
     + 'badge, the people and the message, then give_badge. list_my_badges shows the badges the user received.',
   'Confirm every write (leave requests, cancellations, approvals, goal changes, badges) with the user before calling it, '
     + 'and follow structuredContent.nextAction when present.',
   'Everything else in Teamso (expenses, overtime, time tracking, payroll, recruiting, inventory, documents, '
     + 'settings...): prefer a specific tool above when one fits; otherwise find_api_endpoints (or list_api_modules) '
-    + '→ describe_api_endpoint → call_api_read for reads, or call_api_write for changes. '
+    + '(1-3 keywords) → describe_api_endpoint → call_api_read for reads, or call_api_write for changes. '
     + 'Only endpoints the user\'s own Teamso permissions allow are listed and callable.',
   'Turkish words → modules: "talep" = the user\'s own requests (DEMAND, /demand; "taleplerim" means these, '
     + 'not approvals), "masraf"/"harcama" = EXPENSE, "fazla mesai" = overtime and "puantaj"/"vardiya" = TIMESHEET, '
