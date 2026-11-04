@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.4
+
+### Changed
+
+- The last tool texts that pointed at other tools or their result fields (`list_performance_periods`, the goal
+  approval tools, endpoint ids, SMS codes, uploads) or told the caller what to send now only describe the tool.
+
 ## 1.3.3
 
 ### Changed

@@ -253,7 +253,7 @@ export function registerCreateLeaveRequest(server: McpServer, client: TeamsoClie
       inputSchema: {
         ...leaveRequestInput,
         description: z.string().trim().max(1000).optional()
-          .describe('Reason or note for the approver. Required by some leave types (`descriptionRequired`).'),
+          .describe('Reason or note for the approver. Required by some leave types.'),
         otp_code: otpCodeSchema,
       },
       outputSchema: leaveCreatedOutputSchema,

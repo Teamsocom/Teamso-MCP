@@ -80,8 +80,8 @@ const endpointIdSchema = z.string()
   .min(3)
   .max(300)
   .regex(/^(GET|POST|PUT|PATCH|DELETE)\s+\/\S*$/i, 'id must look like "METHOD /path", e.g. "GET /leave/{id}"')
-  .describe('Endpoint id: `"METHOD /path/{placeholder}"`, e.g. `"GET /expense-form/{id}"`. Placeholders '
-    + 'stay in the id; their values go in `path_params`.');
+  .describe('Endpoint id: `"METHOD /path/{placeholder}"`, e.g. `"GET /expense-form/{id}"`, with the '
+    + 'placeholders written as they are.');
 
 const pathParamsSchema = z.record(
   z.string().min(1).max(100),
@@ -104,7 +104,7 @@ const filesSchema = z.array(z.object({
     .describe('MIME type, e.g. `application/pdf` or `image/png`.'),
   base64: z.string().min(1).max(14_500_000).describe('File content, base64 encoded.'),
 })).max(MAX_UPLOAD_FILES).optional()
-  .describe(`Files for multipart endpoints (\`multipart: true\`), at most ${MAX_UPLOAD_FILES} files and 10 MB in total.`);
+  .describe(`Files for multipart endpoints, at most ${MAX_UPLOAD_FILES} files and 10 MB in total.`);
 
 // ------------------------------------------------------------------- hints
 
@@ -585,10 +585,10 @@ export function registerRequestSmsCode(server: McpServer, client: TeamsoClient):
     'request_sms_code',
     {
       title: 'Send an SMS verification code',
-      description: 'Send a 6-digit SMS verification code to the caller\'s phone, for API endpoints that '
-        + 'need one (`smsCodeRequired`, e.g. expense finalisation, payslip approval, overtime conversion). '
-        + 'The code is valid for 3 minutes, a new code invalidates the previous one, and each SMS uses '
-        + 'company digital credit.',
+      description: 'Send a 6-digit SMS verification code to the caller\'s phone, for Teamso actions '
+        + 'protected by an SMS code (e.g. expense finalisation, payslip approval, overtime conversion). The '
+        + 'code is valid for 3 minutes, a new code invalidates the previous one, and each SMS uses company '
+        + 'digital credit.',
       inputSchema: {},
       outputSchema: otpOutputSchema,
       annotations: ADDITIVE_WRITE,
