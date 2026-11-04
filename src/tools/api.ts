@@ -50,6 +50,12 @@ import {
 } from './schemas.js';
 import { ADDITIVE_WRITE, DESTRUCTIVE_WRITE, READ_ONLY, otpCodeSchema } from './shared.js';
 
+/**
+ * A request body: JSON (object, array or a single value) or plain text for text/* endpoints. Spelled out so the
+ * listed JSON Schema has types (MCP directories flag an untyped parameter).
+ */
+const requestBodySchema = z.union([z.record(z.unknown()), z.array(z.unknown()), z.string(), z.number(), z.boolean()]);
+
 /** Largest file returned as an embedded resource. */
 export const MAX_FILE_BYTES = 8 * 1024 * 1024;
 /** Largest JSON response read from the API (it is then shortened to `MAX_RESULT_CHARS`). */
@@ -407,7 +413,7 @@ export function registerCallApiRead(server: McpServer, client: TeamsoClient): vo
           .describe('Catalog path pattern with placeholders (e.g. `/leave/{id}`), with `method`, instead of `id`.'),
         path_params: pathParamsSchema,
         query: querySchema,
-        body: z.unknown().optional()
+        body: requestBodySchema.optional()
           .describe('Only for reads sent as POST (the filter goes in the body); see `describe_api_endpoint`.'),
         lang: langSchema,
       },
@@ -470,7 +476,7 @@ export function registerCallApiWrite(server: McpServer, client: TeamsoClient): v
         id: endpointIdSchema,
         path_params: pathParamsSchema,
         query: querySchema,
-        body: z.unknown().optional()
+        body: requestBodySchema.optional()
           .describe('Request body: JSON matching the endpoint\'s body schema. For multipart endpoints, an object of '
             + 'the non-file form fields.'),
         files: filesSchema,

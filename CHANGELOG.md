@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.2
+
+### Fixed
+
+- Every tool also carries its title in `annotations.title`, where MCP directories (Claude Connectors Directory, the
+  ChatGPT plugin review) read a tool's display name.
+- `call_api_read` and `call_api_write` describe the type of `body` (a JSON object, array or single value, or plain
+  text) instead of an untyped parameter.
+
 ## 1.3.1
 
 ### Added
