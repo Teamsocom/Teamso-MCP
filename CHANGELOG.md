@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.4.1
+
+### Security
+
+- Dependencies updated for the seven Dependabot advisories (TMS-4860): `zod` 3.25.76 to 4.6.7 (memory exhaustion on
+  oversized constrained collections), `body-parser` 2.3.0 to 2.4.0 (trailing bytes after a compressed body),
+  `qs` 6.16.0 to 6.17.1 (`arrayFormat: 'comma'` TypeError) and `fast-uri` 3.1.8 to 3.1.9 (four URI parsing
+  advisories). `@modelcontextprotocol/sdk` 1.32.1 to 1.32.2. `npm audit` reports no vulnerabilities.
+
+### Changed
+
+- The listed tool schemas are the same contract as in 1.4.0. Zod 4 lists a plain object input as open; the server
+  keeps input objects closed (`additionalProperties: false`) as before, and records keep their value schema.
+  Schemas that pointed inside themselves with `$ref` are now written out in place. Unknown arguments are still
+  dropped, not refused.
+- New contract tests: every input object is closed at every level, outputs state `additionalProperties`, no
+  internal `$ref`, and the patched dependency versions.
+
 ## 1.4.0
 
 ### Added

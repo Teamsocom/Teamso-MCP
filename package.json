@@ -1,6 +1,6 @@
 {
   "name": "@teamso/teamso-mcp",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Official MCP server for Teamso HR: request leave, handle approvals, find colleagues, manage performance goals, give recognition badges, follow AI Simulation practice and results, read payslips, search the Teamso help center and reach every other Teamso module through permission-checked generic API tools from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant",
   "type": "module",
   "main": "dist/server.js",
@@ -77,9 +77,9 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "ajv": "^8.20.0",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

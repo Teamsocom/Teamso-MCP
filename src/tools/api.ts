@@ -54,7 +54,7 @@ import { ADDITIVE_WRITE, DESTRUCTIVE_WRITE, READ_ONLY, otpCodeSchema } from './s
  * A request body: JSON (object, array or a single value) or plain text for text/* endpoints. Spelled out so the
  * listed JSON Schema has types (MCP directories flag an untyped parameter).
  */
-const requestBodySchema = z.union([z.record(z.unknown()), z.array(z.unknown()), z.string(), z.number(), z.boolean()]);
+const requestBodySchema = z.union([z.record(z.string(), z.unknown()), z.array(z.unknown()), z.string(), z.number(), z.boolean()]);
 
 /** Largest file returned as an embedded resource. */
 export const MAX_FILE_BYTES = 8 * 1024 * 1024;
