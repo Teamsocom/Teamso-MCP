@@ -1,7 +1,7 @@
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
 /**
- * MCP SDK 1.30 still advertises Zod tool schemas as JSON Schema draft-07.
+ * The MCP SDK advertises Zod tool schemas as JSON Schema draft-07.
  * Claude and other 2020-12-only clients reject those tools before dispatch.
  * Rewrite the tools/list payload at the transport boundary instead of
  * depending on an SDK target option that is not currently passed through.
@@ -126,6 +126,32 @@ export function toJsonSchema2020_12<T>(schema: T): T {
   } as T;
 }
 
+/**
+ * Zod 4 lists a plain `z.object()` input without `additionalProperties` (its "input" view allows unknown keys,
+ * which it then strips). Zod 3 listed the same object as closed. Keep the published contract unchanged: an input
+ * object that does not say otherwise is closed. Objects that state `additionalProperties` (records, loose objects)
+ * keep what they state.
+ */
+export function closeInputObjects<T>(node: T): T {
+  if (Array.isArray(node)) return node.map(closeInputObjects) as unknown as T;
+  if (!isPlainObject(node)) return node;
+  const out: JsonObject = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (DATA_KEYWORDS.has(key)) out[key] = value;
+    else if (SCHEMA_MAP_KEYWORDS.has(key) || key === 'definitions') {
+      out[key] = isPlainObject(value)
+        ? Object.fromEntries(Object.entries(value).map(([name, sub]) => [name, closeInputObjects(sub)]))
+        : value;
+    } else out[key] = closeInputObjects(value);
+  }
+  // A tool without parameters is listed by the SDK as an empty object without the keyword, as before
+  if (out.type === 'object' && isPlainObject(out.properties) && Object.keys(out.properties).length > 0
+      && !('additionalProperties' in out)) {
+    out.additionalProperties = false;
+  }
+  return out as T;
+}
+
 export function normalizeOutgoingMessage(message: unknown): unknown {
   if (!isPlainObject(message)) return message;
 
@@ -136,7 +162,7 @@ export function normalizeOutgoingMessage(message: unknown): unknown {
     if (!isPlainObject(tool)) return tool;
     const next: JsonObject = { ...tool };
     if (isPlainObject(tool.inputSchema)) {
-      next.inputSchema = toJsonSchema2020_12(tool.inputSchema);
+      next.inputSchema = toJsonSchema2020_12(closeInputObjects(tool.inputSchema));
     }
     if (isPlainObject(tool.outputSchema)) {
       next.outputSchema = toJsonSchema2020_12(tool.outputSchema);
