@@ -4,7 +4,7 @@
 
 # Teamso MCP Server
 
-**Official [MCP](https://modelcontextprotocol.io/) server for [Teamso](https://teamso.com/)**: request leave, handle approvals, find colleagues, manage performance goals, give recognition badges, follow AI Simulation practice and results, read payslips, search the Teamso help center and reach every other Teamso module through permission-checked generic API tools, from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant.
+**Official [MCP](https://modelcontextprotocol.io/) server for [Teamso](https://teamso.com/)**: request leave, handle approvals, find colleagues, manage performance goals, give recognition badges, follow AI Simulation practice and results, read budget studies of Workforce Cost Forecast, read payslips, search the Teamso help center and reach every other Teamso module through permission-checked generic API tools, from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant.
 
 [![npm](https://img.shields.io/badge/npm-@teamso/teamso--mcp-1a56db?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/package/@teamso/teamso-mcp)
 [![MCP](https://img.shields.io/badge/MCP-compatible-333?style=for-the-badge)](https://modelcontextprotocol.io/)
@@ -219,6 +219,19 @@ TEAMSO_ACCESS_TOKEN=tms_pat_your-token
 The conversation itself happens in the Teamso web app
 ([/dashboard/simulation](https://teamso.com/dashboard/simulation)); no tool starts one.
 
+### Workforce Cost Forecast
+
+| Tool | Description |
+|------|-------------|
+| `list_cost_forecasts` | The budget studies you can open: name, period, status, last calculation and total cost |
+| `get_cost_forecast_summary` | One study's KPIs (employees, gross, net, total employer cost, expenses) and monthly totals |
+| `get_cost_forecast_breakdown` | One study's total cost by branch, department or position, the largest first (groups only, never single employees) |
+
+All three are read only. Amounts are in TRY and cover only the employees your Teamso rights let you see in the
+report (salary right and branch scope); a manager sees the totals of their own scope. Studies are created,
+calculated and changed in the Teamso web app
+([/dashboard/cost-forecast](https://teamso.com/dashboard/cost-forecast)); no tool does that.
+
 ### Communication
 
 | Tool | Description |
@@ -254,6 +267,9 @@ Goal chain:
 
 AI Simulation chain:
 `list_simulation_assignments → (practise in the web app) → get_simulation_results → get_simulation_results attempt_id`
+
+Budget chain:
+`list_cost_forecasts → get_cost_forecast_summary → get_cost_forecast_breakdown`
 
 Everything else (expenses, overtime, time tracking, payroll, recruiting,
 inventory, documents, settings...):
@@ -321,6 +337,7 @@ tools a server offers, as a comma-separated list. Default: all tools.
 | `performance` | the ten goal and evaluation tools |
 | `badges` | `list_badges`, `give_badge`, `list_my_badges` |
 | `simulation` | `list_simulation_assignments`, `get_simulation_results`, `list_simulations` |
+| `cost_forecast` | `list_cost_forecasts`, `get_cost_forecast_summary`, `get_cost_forecast_breakdown` |
 | `communication` | `list_announcements` |
 | `payroll` | `list_my_payslips`, `get_payslip_pdf` |
 | `api` | `find_api_endpoints`, `list_api_modules`, `describe_api_endpoint`, `call_api_read`, `call_api_write`, `request_sms_code` |
@@ -441,7 +458,7 @@ const client = new TeamsoClient(userToken, 'https://api.teamso.com/v1', {
 
 | Export | Description |
 |--------|-------------|
-| `createMcpServer(client, options?)` | Creates an McpServer with all 40 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
+| `createMcpServer(client, options?)` | Creates an McpServer with all 43 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
 | `TeamsoClient` | Teamso REST client (personal access token, envelope handling, optional trusted-proxy signing) |
 | `TeamsoApiError` | Error with `status`, `messageCode`, `apiMessage` and the response `body` |
 | `registerTools(server, client, options?)` | Register the tools (optionally only some `toolsets`) on an existing McpServer |
@@ -470,7 +487,7 @@ import { registerPrompts, PROMPT_NAMES } from '@teamso/teamso-mcp/prompts';
 | `TEAMSO_API_BASE_URL` | No | Override the API base URL (default: `https://api.teamso.com/v1`) |
 | `TEAMSO_HELP_BASE_URL` | No | Site the help articles are downloaded from (default: `https://teamso.com`) |
 | `TEAMSO_HELP_PUBLIC_URL` | No | Public site used for help links and images in tool output (default: `TEAMSO_HELP_BASE_URL`). Set it when the download address is internal |
-| `TEAMSO_TOOLSETS` | No | Comma-separated toolsets to serve: `core`, `help`, `leave`, `approvals`, `employees`, `performance`, `badges`, `simulation`, `communication`, `payroll`, `api` (default: all) |
+| `TEAMSO_TOOLSETS` | No | Comma-separated toolsets to serve: `core`, `help`, `leave`, `approvals`, `employees`, `performance`, `badges`, `simulation`, `cost_forecast`, `communication`, `payroll`, `api` (default: all) |
 
 ## Self-hosting from source
 

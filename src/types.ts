@@ -691,6 +691,98 @@ export interface TeamsoSimulationCatalog {
   shelves?: Array<{ key: string; items?: TeamsoSimulationCatalogItem[] | null }> | null;
 }
 
+// --------------------------------------------------------- cost forecast
+
+/**
+ * Amounts arrive as JSON numbers (BigDecimal, two decimals) and timestamps as ISO instants. Every total is over the
+ * employees the caller may see in the report; no employee, name or salary row is ever part of these answers.
+ */
+export interface TeamsoCostForecastListItem {
+  id: string;
+  name?: string | null;
+  startPeriod?: string | null;
+  endPeriod?: string | null;
+  monthCount?: number | null;
+  approvalStatus?: string | null;
+  activeBudget?: boolean | null;
+  owned?: boolean | null;
+  /** `NOT_CALCULATED`, `CALCULATING`, `CURRENT` or `OUTDATED`. */
+  status?: string | null;
+  lastCalculatedAt?: string | null;
+  /** `DONE` or `PARTIAL` (some employees could not be calculated). */
+  runStatus?: string | null;
+  employees?: number | null;
+  limited?: boolean | null;
+  amountsHidden?: boolean | null;
+  totalCost?: number | string | null;
+  totalCostWithExpenses?: number | string | null;
+}
+
+/** `GET /cost-forecast/mcp/studies`. */
+export interface TeamsoCostForecastList {
+  studies?: TeamsoCostForecastListItem[] | null;
+  total?: number | null;
+  returned?: number | null;
+  limit?: number | null;
+}
+
+export interface TeamsoCostForecastStudyHead {
+  id: string;
+  name?: string | null;
+  startPeriod?: string | null;
+  endPeriod?: string | null;
+  monthCount?: number | null;
+  approvalStatus?: string | null;
+  headcount?: boolean | null;
+}
+
+export interface TeamsoCostForecastRun {
+  id?: string | null;
+  status?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  current?: boolean | null;
+  failedEmployees?: number | null;
+}
+
+/** Fields both study answers share. */
+export interface TeamsoCostForecastResultHead {
+  study?: TeamsoCostForecastStudyHead | null;
+  status?: string | null;
+  calculated?: boolean | null;
+  run?: TeamsoCostForecastRun | null;
+  scope?: { limited?: boolean | null; employees?: number | null } | null;
+  amountsHidden?: boolean | null;
+  hasExpenses?: boolean | null;
+}
+
+export type TeamsoCostForecastAmounts = Partial<Record<
+  'gross' | 'net' | 'totalCost' | 'expenses' | 'totalCostWithExpenses' | 'grossSalary' | 'grossBenefits',
+  number | string | null
+>> & { employees?: number | null; payrolls?: number | null };
+
+/** `GET /cost-forecast/mcp/studies/{id}/summary`. */
+export interface TeamsoCostForecastSummary extends TeamsoCostForecastResultHead {
+  kpis?: TeamsoCostForecastAmounts | null;
+  months?: Array<TeamsoCostForecastAmounts & { period?: string | null }> | null;
+  rolling?: {
+    actualsThrough?: string | null;
+    yearEnd?: number | string | null;
+    approved?: { id?: string | null; name?: string | null; total?: number | string | null } | null;
+    difference?: number | string | null;
+    differencePct?: number | string | null;
+  } | null;
+}
+
+/** `GET /cost-forecast/mcp/studies/{id}/breakdown`. */
+export interface TeamsoCostForecastBreakdown extends TeamsoCostForecastResultHead {
+  by?: string | null;
+  groups?: Array<TeamsoCostForecastAmounts & { name?: string | null; share?: number | string | null }> | null;
+  groupCount?: number | null;
+  truncated?: boolean | null;
+  totals?: TeamsoCostForecastAmounts | null;
+}
+
 // ------------------------------------------------------------- API catalog
 
 /**

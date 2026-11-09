@@ -49,7 +49,8 @@ export const DEFAULT_INSTRUCTIONS = [
   'Prompts: request_leave and review_pending_approvals walk through these flows.',
   'Approvals: list_pending_approvals → approve_or_reject_leave (a rejection needs a reason).',
   'Ids: leave_type_id comes from list_leave_types, leave ids from list_my_leaves or list_pending_approvals, '
-    + 'employee ids from search_employees, badge ids from list_badges, payslip ids from list_my_payslips. '
+    + 'employee ids from search_employees, badge ids from list_badges, payslip ids from list_my_payslips, '
+    + 'budget study ids from list_cost_forecasts. '
     + 'get_me lists the user\'s permission codes (e.g. LEAVE_ADD, LEAVE_DELETE).',
   'Goals use the period title from list_performance_periods. create_user_goal makes a draft (check canAddGoal in '
     + 'list_my_goals first and keep a person\'s weights at 100), send_goals_to_approval sends drafts. In '
@@ -63,6 +64,12 @@ export const DEFAULT_INSTRUCTIONS = [
     + 'the user, list_simulations for the scenario catalog, get_simulation_results for scores and feedback (with '
     + 'attempt_id for one attempt; scope "team" for managers and admins). An AI Simulation conversation happens in '
     + 'the Teamso web app (/dashboard/simulation); no tool starts one.',
+  'Workforce Cost Forecast ("bütçe", "maliyet tahmini", "personel maliyeti"): list_cost_forecasts for the budget '
+    + 'studies with their total cost, get_cost_forecast_summary for one study\'s KPIs and monthly totals, '
+    + 'get_cost_forecast_breakdown for its total cost by branch, department or position. Amounts are TRY and cover '
+    + 'only the employees the user may see (salary right and branch scope; scope.limited says so, amountsHidden means '
+    + 'none). Studies are created, calculated and changed only in the Teamso web app (/dashboard/cost-forecast); no '
+    + 'tool does that.',
   'Confirm every write (leave requests, cancellations, approvals, goal changes, badges) with the user before calling it, '
     + 'and follow structuredContent.nextAction when present.',
   'Everything else in Teamso (expenses, overtime, time tracking, payroll, recruiting, inventory, documents, '
@@ -94,7 +101,8 @@ export interface CreateMcpServerOptions {
   instructions?: string;
   /**
    * Tool groups to serve (`core`, `help`, `leave`, `approvals`, `employees`, `performance`, `badges`,
-   * `simulation`, `communication`, `payroll`, `api`), as an array or a comma-separated list. Default: all.
+   * `simulation`, `cost_forecast`, `communication`, `payroll`, `api`), as an array or a comma-separated list.
+   * Default: all.
    */
   toolsets?: string | readonly string[];
 }

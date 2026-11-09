@@ -528,6 +528,116 @@ export const simulationCatalogOutputSchema = {
   practiceUrl: z.string(),
 };
 
+// ---------------------------------------------------------- cost forecast
+
+const costForecastStatusSchema = z.enum(['NOT_CALCULATED', 'CALCULATING', 'CURRENT', 'OUTDATED']);
+
+export const costForecastStudySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  startPeriod: z.string().optional(),
+  endPeriod: z.string().optional(),
+  monthCount: z.number().optional(),
+  approvalStatus: z.string().optional(),
+  headcount: z.boolean(),
+});
+
+export const costForecastRunSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+  startedAt: z.string().optional(),
+  finishedAt: z.string().optional(),
+  current: z.boolean(),
+  failedEmployees: z.number(),
+});
+
+export const costForecastScopeSchema = z.object({
+  limited: z.boolean(),
+  employees: z.number(),
+});
+
+const costForecastAmountsShape = {
+  employees: z.number(),
+  gross: z.number(),
+  net: z.number(),
+  totalCost: z.number(),
+  expenses: z.number().optional(),
+  totalCostWithExpenses: z.number().optional(),
+};
+
+export const costForecastListOutputSchema = {
+  studies: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    startPeriod: z.string().optional(),
+    endPeriod: z.string().optional(),
+    monthCount: z.number().optional(),
+    status: costForecastStatusSchema,
+    approvalStatus: z.string().optional(),
+    activeBudget: z.boolean(),
+    owned: z.boolean(),
+    lastCalculatedAt: z.string().optional(),
+    runStatus: z.string().optional(),
+    employees: z.number().optional(),
+    limited: z.boolean(),
+    amountsHidden: z.boolean(),
+    totalCost: z.number().optional(),
+    totalCostWithExpenses: z.number().optional(),
+    reportUrl: z.string(),
+  })),
+  total: z.number(),
+  returned: z.number(),
+  currency: z.literal('TRY'),
+  appUrl: z.string(),
+  nextAction: nextActionSchema.optional(),
+};
+
+const costForecastResultHeadShape = {
+  study: costForecastStudySchema,
+  status: costForecastStatusSchema,
+  calculated: z.boolean(),
+  run: costForecastRunSchema.optional(),
+  scope: costForecastScopeSchema.optional(),
+  amountsHidden: z.boolean(),
+  hasExpenses: z.boolean(),
+  currency: z.literal('TRY'),
+  reportUrl: z.string(),
+};
+
+export const costForecastSummaryOutputSchema = {
+  ...costForecastResultHeadShape,
+  kpis: z.object({
+    ...costForecastAmountsShape,
+    payrolls: z.number().optional(),
+    grossSalary: z.number().optional(),
+    grossBenefits: z.number().optional(),
+  }).optional(),
+  months: z.array(z.object({ period: z.string(), ...costForecastAmountsShape })),
+  rolling: z.object({
+    actualsThrough: z.string().optional(),
+    yearEnd: z.number().optional(),
+    approvedName: z.string().optional(),
+    approvedTotal: z.number().optional(),
+    difference: z.number().optional(),
+    differencePct: z.number().optional(),
+  }).optional(),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const costForecastBreakdownOutputSchema = {
+  ...costForecastResultHeadShape,
+  by: z.enum(['branch', 'department', 'position']),
+  groups: z.array(z.object({
+    name: z.string(),
+    unassigned: z.boolean(),
+    ...costForecastAmountsShape,
+    share: z.number(),
+  })),
+  groupCount: z.number(),
+  truncated: z.boolean(),
+  totals: z.object(costForecastAmountsShape).optional(),
+};
+
 // ---------------------------------------------------------- communication
 
 export const announcementsOutputSchema = {
