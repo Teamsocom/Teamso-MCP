@@ -12,6 +12,11 @@ import {
 import { registerApproveOrRejectLeave, registerListPendingApprovals } from './approvals.js';
 import { registerGiveBadge, registerListBadges, registerListMyBadges } from './badges.js';
 import { registerListAnnouncements } from './communication.js';
+import {
+  registerGetCostForecastBreakdown,
+  registerGetCostForecastSummary,
+  registerListCostForecasts,
+} from './costForecast.js';
 import { registerGetEmployeeProfile, registerSearchEmployees } from './employees.js';
 import {
   registerGetHelpArticle,
@@ -85,6 +90,9 @@ const REGISTRARS = {
   list_simulation_assignments: registerListSimulationAssignments,
   get_simulation_results: registerGetSimulationResults,
   list_simulations: registerListSimulations,
+  list_cost_forecasts: registerListCostForecasts,
+  get_cost_forecast_summary: registerGetCostForecastSummary,
+  get_cost_forecast_breakdown: registerGetCostForecastBreakdown,
   list_announcements: registerListAnnouncements,
   list_my_payslips: registerListMyPayslips,
   get_payslip_pdf: registerGetPayslipPdf,
@@ -132,6 +140,7 @@ export const TOOLSETS = Object.freeze({
   ]),
   badges: Object.freeze(['list_badges', 'give_badge', 'list_my_badges']),
   simulation: Object.freeze(['list_simulation_assignments', 'get_simulation_results', 'list_simulations']),
+  cost_forecast: Object.freeze(['list_cost_forecasts', 'get_cost_forecast_summary', 'get_cost_forecast_breakdown']),
   communication: Object.freeze(['list_announcements']),
   payroll: Object.freeze(['list_my_payslips', 'get_payslip_pdf']),
   api: Object.freeze([
@@ -236,6 +245,9 @@ export {
   registerListSimulationAssignments,
   registerGetSimulationResults,
   registerListSimulations,
+  registerListCostForecasts,
+  registerGetCostForecastSummary,
+  registerGetCostForecastBreakdown,
   registerListAnnouncements,
   registerListMyPayslips,
   registerGetPayslipPdf,

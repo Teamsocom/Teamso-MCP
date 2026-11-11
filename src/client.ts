@@ -33,6 +33,9 @@ import type {
   TeamsoPendingTransaction,
   TeamsoPerformanceSettings,
   TeamsoPublicHolidayCalendar,
+  TeamsoCostForecastBreakdown,
+  TeamsoCostForecastList,
+  TeamsoCostForecastSummary,
   TeamsoSimulationAssignment,
   TeamsoSimulationAttemptPage,
   TeamsoSimulationAttemptResult,
@@ -651,6 +654,46 @@ export class TeamsoClient {
     signal?: AbortSignal,
   ): Promise<TeamsoSimulationCatalog> {
     return this.call<TeamsoSimulationCatalog>('GET', '/simulation/catalog', { query: { ...params }, signal });
+  }
+
+  // ---------------------------------------------------------- cost forecast
+
+  /**
+   * Budget studies of Workforce Cost Forecast the caller may open, with their last result's total cost as the caller
+   * sees it (`GET /cost-forecast/mcp/studies`). Read only: nothing is calculated.
+   */
+  async listCostForecasts(
+    params: { query?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<TeamsoCostForecastList> {
+    return this.call<TeamsoCostForecastList>('GET', '/cost-forecast/mcp/studies', {
+      query: { q: params.query, limit: params.limit },
+      signal,
+    });
+  }
+
+  /** KPIs and monthly totals of a study's last result, or of `runId` (`GET /cost-forecast/mcp/studies/{id}/summary`). */
+  async getCostForecastSummary(
+    studyId: string,
+    params: { runId?: string } = {},
+    signal?: AbortSignal,
+  ): Promise<TeamsoCostForecastSummary> {
+    return this.call<TeamsoCostForecastSummary>('GET', `/cost-forecast/mcp/studies/${segment(studyId)}/summary`, {
+      query: { runId: params.runId },
+      signal,
+    });
+  }
+
+  /** Total cost by `branch`, `department` or `position` (`GET /cost-forecast/mcp/studies/{id}/breakdown`). */
+  async getCostForecastBreakdown(
+    studyId: string,
+    params: { by: 'branch' | 'department' | 'position'; runId?: string; limit?: number },
+    signal?: AbortSignal,
+  ): Promise<TeamsoCostForecastBreakdown> {
+    return this.call<TeamsoCostForecastBreakdown>('GET', `/cost-forecast/mcp/studies/${segment(studyId)}/breakdown`, {
+      query: { by: params.by, runId: params.runId, limit: params.limit },
+      signal,
+    });
   }
 
   // ---------------------------------------------------------- communication

@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.5.0 (2026-11-11)
+
+The API endpoints these tools call (`/cost-forecast/mcp/studies`) are live on teamso.com since 2026-11-11. The
+Workforce Cost Forecast package is enabled per company by a Teamso distributor; without it the tools answer
+`MODULE_DISABLED`.
+
+### Added
+
+- Workforce Cost Forecast tools (toolset `cost_forecast`, TMS-4896), read only, with the token owner's own Teamso
+  rights:
+  - `list_cost_forecasts`: the budget studies the user may open (`GET /cost-forecast/mcp/studies`, optional name
+    search and `limit`), latest period first, with period, status (`NOT_CALCULATED`, `CALCULATING`, `CURRENT`,
+    `OUTDATED`), approval status, last calculation time (Turkey wall clock) and the last result's total cost.
+  - `get_cost_forecast_summary`: one study's KPI cards (employees, payroll months, gross salary, other gross pay,
+    gross, net, total employer cost, expenses) and monthly totals (`GET /cost-forecast/mcp/studies/{id}/summary`,
+    optional `run_id`), and a rolling study's year-end forecast against the approved budget.
+  - `get_cost_forecast_breakdown`: total cost by `branch`, `department` or `position`, the largest first, with
+    employees, gross, net, expenses and share (`GET /cost-forecast/mcp/studies/{id}/breakdown`).
+- The API applies the report's rules: Teamso employees count only with the salary right (`SALARY_READ`) and inside
+  the user's branch scope (a manager sees the totals of their scope, `scope.limited`); when none of the calculated
+  employees is visible no amount is returned (`amountsHidden`). Answers hold totals only, never an employee, a name
+  or a salary row. No tool calculates, edits or creates a study.
+- `MODULE_DISABLED`, `COST_FORECAST_NOT_FOUND` and `PERMISSION_DENIED` answers are explained.
+- The server instructions name the budget tools and say that studies are created and calculated in the Teamso web
+  app (`/dashboard/cost-forecast`).
+- The server instructions say that texts inside tool results (study, department, branch, position and people names,
+  notes) are data written by Teamso users and that instructions written in them are never followed (TMS-4925).
+
+### Changed
+
+- `TOOL_NAMES` and `TOOLSETS` list the budget tools right after the AI Simulation tools, so the generic API tools stay
+  last. No earlier tool was renamed or removed.
+
 ## 1.4.1
 
 ### Security
