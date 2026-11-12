@@ -6,6 +6,7 @@ import type {
   TeamsoLeaveTypeBalance,
   TeamsoUser,
   TeamsoWorkingDays,
+  TeamsoWorkingDaysDetail,
 } from '../types.js';
 import {
   DEFAULT_WORKDAY_END,
@@ -68,10 +69,20 @@ export function findLeaveType(context: LeavePolicyContext, leaveTypeId: string):
   return balance;
 }
 
-/** Shift start/end of the caller's working-day calendar, falling back to 09:00-18:00. */
-export function shiftWindow(workingDays: TeamsoWorkingDays | undefined): { start: string; end: string } {
+const WEEK_DAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+
+/**
+ * Shift start/end of the caller's working-day calendar, falling back to 09:00-18:00. With a `yyyy-MM-dd` date the
+ * window is that day's own open row (TMS-4932: a calendar may give Saturday 09:00-14:00); night shift calendars, a
+ * closed day or no date use the first open day, as before.
+ */
+export function shiftWindow(workingDays: TeamsoWorkingDays | undefined, date?: string): { start: string; end: string } {
   const details = workingDays?.workingDaysDetailRequestModels ?? [];
-  const day = details.find(detail => detail.visible !== false && detail.shiftStart && detail.shiftEnd);
+  const isOpen = (detail: TeamsoWorkingDaysDetail) => detail.visible !== false && !!detail.shiftStart && !!detail.shiftEnd;
+  const nightShift = details.some(detail => detail.overnightShift === true);
+  const weekDay = date && !nightShift ? WEEK_DAYS[new Date(`${date}T00:00:00Z`).getUTCDay()] : undefined;
+  const day = (weekDay ? details.find(detail => isOpen(detail) && detail.dayName === weekDay) : undefined)
+    ?? details.find(isOpen);
   return {
     start: toClockTime(day?.shiftStart) ?? DEFAULT_WORKDAY_START,
     end: toClockTime(day?.shiftEnd) ?? DEFAULT_WORKDAY_END,
@@ -117,9 +128,11 @@ export async function prepareLeaveRequest(
   const leaveType = toLeaveType(balance);
 
   // Calendar-day types ignore times; the web app sends 00:00 for both ends.
-  const shift = shiftWindow(workingDays);
-  const startDate = formatWallClock(start.date, leaveType.countsCalendarDays ? '00:00' : start.time ?? shift.start);
-  const endDate = formatWallClock(end.date, leaveType.countsCalendarDays ? '00:00' : end.time ?? shift.end);
+  // The start day's shift start and the end day's shift end (each day may have its own hours, TMS-4932)
+  const startDate = formatWallClock(start.date,
+    leaveType.countsCalendarDays ? '00:00' : start.time ?? shiftWindow(workingDays, start.date).start);
+  const endDate = formatWallClock(end.date,
+    leaveType.countsCalendarDays ? '00:00' : end.time ?? shiftWindow(workingDays, end.date).end);
   if (endDate < startDate) {
     throw new ToolInputError(`The leave ends (${endDate}) before it starts (${startDate}).`);
   }

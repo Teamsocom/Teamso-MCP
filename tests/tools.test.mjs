@@ -275,6 +275,46 @@ test('calculate_leave_days sends 00:00 for calendar-day types and explicit times
   });
 });
 
+test('calculate_leave_days uses each day\'s own shift when only dates are given (TMS-4932)', async () => {
+  const perDay = {
+    id: 'wd-1',
+    workingDaysDetailRequestModels: [
+      { dayName: 'MONDAY', shiftStart: '09:00:00', shiftEnd: '18:00:00', visible: true },
+      { dayName: 'FRIDAY', shiftStart: '09:00:00', shiftEnd: '18:00:00', visible: true },
+      { dayName: 'SATURDAY', shiftStart: '10:00:00', shiftEnd: '14:00:00', visible: true },
+      { dayName: 'SUNDAY', shiftStart: '07:00:00', shiftEnd: '08:00:00', visible: false },
+    ],
+  };
+  await withMcp([['GET /working-days/getWorkingDaysByMe', () => envelope(perDay)]], async ({ call, calls }) => {
+    // Saturday alone: 10:00-14:00
+    await call('calculate_leave_days', { leave_type_id: 'lt-annual', start: '2026-11-07', end: '2026-11-07' });
+    // Saturday to Monday: Saturday's start, Monday's end
+    await call('calculate_leave_days', { leave_type_id: 'lt-annual', start: '2026-11-07', end: '2026-11-09' });
+    // Friday to closed Sunday: the closed day falls back to the first open day
+    await call('calculate_leave_days', { leave_type_id: 'lt-annual', start: '2026-11-06', end: '2026-11-08' });
+    const [sat, satMon, friSun] = callsTo(calls, 'GET', '/leave/dayCalculator/');
+    assert.match(sat.url.pathname, /2026-11-07%2010:00\/2026-11-07%2014:00$/);
+    assert.match(satMon.url.pathname, /2026-11-07%2010:00\/2026-11-09%2018:00$/);
+    assert.match(friSun.url.pathname, /2026-11-06%2009:00\/2026-11-08%2018:00$/);
+  });
+});
+
+test('calculate_leave_days keeps the first open day on a night shift calendar', async () => {
+  const night = {
+    id: 'wd-1',
+    workingDaysDetailRequestModels: [
+      { dayName: 'MONDAY', shiftStart: '22:00:00', shiftEnd: '06:00:00', visible: true, overnightShift: true },
+      { dayName: 'SATURDAY', shiftStart: '20:00:00', shiftEnd: '04:00:00', visible: true, overnightShift: true },
+    ],
+  };
+  await withMcp([['GET /working-days/getWorkingDaysByMe', () => envelope(night)]], async ({ call, calls }) => {
+    // Saturday's own 20:00 is not used: night calendars keep one shift (the first open day)
+    await call('calculate_leave_days', { leave_type_id: 'lt-annual', start: '2026-11-07', end: '2026-11-08 06:00' });
+    const [calc] = callsTo(calls, 'GET', '/leave/dayCalculator/');
+    assert.match(calc.url.pathname, /2026-11-07%2022:00\/2026-11-08%2006:00$/);
+  });
+});
+
 test('calculate_leave_days reports per-request limits and pre-check refusals', async () => {
   await withMcp([[/^GET \/leave\/dayCalculator\//, () => envelope('most_day_count', 'GET_ERROR')]], async ({ call }) => {
     const result = await call('calculate_leave_days', { leave_type_id: 'lt-annual', start: '2026-11-02', end: '2026-11-30' });

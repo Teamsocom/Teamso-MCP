@@ -122,6 +122,7 @@ export interface TeamsoWorkingDaysDetail {
   shiftStart?: string | null;
   shiftEnd?: string | null;
   visible?: boolean;
+  overnightShift?: boolean | null;
 }
 
 /** `GET /working-days/getWorkingDaysByMe`. */
