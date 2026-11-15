@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `cancel_leave_request` no longer deletes a leave (TMS-4990). A request still waiting for a decision is withdrawn
+  (`PUT /leave/cancel/{id}`, no SMS code). An approved leave that has not started is cancelled without being deleted
+  (`POST /leave-change/{id}` with `kind: CANCEL`, `reason` and the SMS code): it goes through the leave approval
+  process unless the company applies it at once, and stays as Cancelled (status 7) with the reason. New output
+  fields `outcome` (`WITHDRAWN`, `CANCELLED`, `SENT_FOR_APPROVAL`) and `changeId`.
+
+### Added
+
+- `change_leave_request` (toolset `leave`): change the dates of an approved leave (`RESCHEDULE`) or shorten it after
+  an early return (`EARLY_RETURN`, `return_date` = the day back at work). Without `otp_code` it previews the change
+  (`POST /leave-change/{id}/preview`: new dates and working days, days back to the balance, closed payroll periods,
+  whether it applies at once); with `otp_code` and `reason` it sends it.
+
 ## 1.5.0 (2026-11-11)
 
 The API endpoints these tools call (`/cost-forecast/mcp/studies`) are live on teamso.com since 2026-11-11. The

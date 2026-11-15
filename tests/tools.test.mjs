@@ -20,7 +20,7 @@ const EXPECTED_TOOLS = [
   'search_help_articles', 'get_help_article', 'list_help_modules',
   'get_me',
   'list_leave_types', 'get_my_leave_balance', 'calculate_leave_days', 'request_leave_otp',
-  'create_leave_request', 'list_my_leaves', 'cancel_leave_request',
+  'create_leave_request', 'list_my_leaves', 'cancel_leave_request', 'change_leave_request',
   'list_pending_approvals', 'approve_or_reject_leave',
   'search_employees', 'get_employee_profile',
   'list_performance_periods', 'list_my_goals', 'list_team_goals', 'create_user_goal',
@@ -401,19 +401,73 @@ test('list_my_leaves keeps only the caller\'s leaves and filters by status', asy
   });
 });
 
-test('cancel_leave_request deletes only the caller\'s leave after the OTP check', async () => {
-  await withMcp([], async ({ call, calls }) => {
-    const result = await call('cancel_leave_request', { leave_id: 'l-1', otp_code: VALID_OTP });
+test('cancel_leave_request withdraws the caller\'s pending request without an SMS code and never deletes', async () => {
+  await withMcp([['PUT /leave/cancel/l-1', () => envelope(undefined, 'DELETE_SUCCESS')]], async ({ call, calls }) => {
+    const result = await call('cancel_leave_request', { leave_id: 'l-1' });
     assert.notEqual(result.isError, true, textOf(result));
-    const order = calls.map(request => `${request.method} ${request.path}`);
-    assert.ok(order.indexOf(`GET /sms/checkToken/${VALID_OTP}`) < order.indexOf('DELETE /leave/l-1'));
+    assert.equal(result.structuredContent.outcome, 'WITHDRAWN');
     assert.equal(result.structuredContent.leave.id, MY_LEAVE.id);
-    assert.deepEqual(result.structuredContent.closedPayrollPeriods, []);
+    assert.equal(callsTo(calls, 'PUT', '/leave/cancel/l-1').length, 1);
+    assert.equal(callsTo(calls, 'GET', `/sms/checkToken/${VALID_OTP}`).length, 0);
+    assert.equal(calls.filter(request => request.method === 'DELETE').length, 0);
 
-    const notMine = await call('cancel_leave_request', { leave_id: 'l-2', otp_code: VALID_OTP });
+    const notMine = await call('cancel_leave_request', { leave_id: 'l-2' });
     assert.equal(notMine.isError, true);
-    assert.match(textOf(notMine), /not one of your leave requests/);
-    assert.equal(callsTo(calls, 'DELETE', '/leave/l-2').length, 0);
+    assert.match(textOf(notMine), /not one of your leaves/);
+  });
+});
+
+// TMS-4990: an approved leave is cancelled or changed without being deleted
+const APPROVED_LEAVE = { ...MY_LEAVE, id: 'l-9', state: 2, startDate: '2026-12-07 09:00', endDate: '2026-12-11 18:00', totalLeaveDay: 5 };
+const approvedList = ['GET /leave/listAllLeavesAdvancedPagination', () => envelope({
+  items: [APPROVED_LEAVE],
+  pagination: { currentPage: 0, pageSize: 100, totalRecords: 1, totalPages: 1, hasNext: false },
+})];
+
+test('cancel_leave_request turns an approved leave into a cancellation request after the SMS code', async () => {
+  await withMcp([approvedList, ['POST /leave-change/l-9', call => envelope({ id: 'c-1', status: 'PENDING', applied: false, closedPayrollPeriods: [] }, 'INSERT_SUCCESS')]], async ({ call, calls }) => {
+    const noReason = await call('cancel_leave_request', { leave_id: 'l-9', otp_code: VALID_OTP });
+    assert.equal(noReason.isError, true);
+    assert.match(textOf(noReason), /reason/);
+    const noCode = await call('cancel_leave_request', { leave_id: 'l-9', reason: 'Plan değişti' });
+    assert.equal(noCode.isError, true);
+    assert.match(textOf(noCode), /request_leave_otp/);
+    const result = await call('cancel_leave_request', { leave_id: 'l-9', reason: 'Plan değişti', otp_code: VALID_OTP });
+    assert.notEqual(result.isError, true, textOf(result));
+    assert.equal(result.structuredContent.outcome, 'SENT_FOR_APPROVAL');
+    assert.equal(result.structuredContent.changeId, 'c-1');
+    assert.equal(result.structuredContent.cancelled, false);
+    const order = calls.map(request => `${request.method} ${request.path}`);
+    assert.ok(order.indexOf(`GET /sms/checkToken/${VALID_OTP}`) < order.indexOf('POST /leave-change/l-9'));
+    assert.deepEqual(callsTo(calls, 'POST', '/leave-change/l-9')[0].body, { kind: 'CANCEL', reason: 'Plan değişti' });
+    assert.equal(calls.filter(request => request.method === 'DELETE').length, 0);
+  });
+});
+
+test('change_leave_request previews without a code and sends the change with it', async () => {
+  const preview = ['POST /leave-change/l-9/preview', () => envelope({
+    kind: 'EARLY_RETURN', old: { days: 5 }, new: { startDate: '2026-12-07 09:00', endDate: '2026-12-08 18:00', returnToWorkDate: '2026-12-09 09:00', days: 2 },
+    daysBack: 3, closedPayrollPeriods: [], applyAtOnce: true,
+  })];
+  const submit = ['POST /leave-change/l-9', () => envelope({ id: 'c-2', status: 'APPROVED', applied: true }, 'INSERT_SUCCESS')];
+  await withMcp([approvedList, preview, submit], async ({ call, calls }) => {
+    const dry = await call('change_leave_request', { leave_id: 'l-9', kind: 'EARLY_RETURN', return_date: '2026-12-09' });
+    assert.notEqual(dry.isError, true, textOf(dry));
+    assert.equal(dry.structuredContent.status, 'PREVIEW');
+    assert.equal(dry.structuredContent.preview.daysBackToBalance, 3);
+    assert.equal(dry.structuredContent.nextAction.tool, 'request_leave_otp');
+    assert.equal(calls.filter(request => request.method === 'POST' && request.path === '/leave-change/l-9').length, 0, 'no change without the code');
+    const sent = await call('change_leave_request', { leave_id: 'l-9', kind: 'EARLY_RETURN', return_date: '2026-12-09', reason: 'Erken döndüm', otp_code: VALID_OTP });
+    assert.notEqual(sent.isError, true, textOf(sent));
+    assert.equal(sent.structuredContent.status, 'APPROVED');
+    const sentCall = calls.find(request => request.method === 'POST' && request.path === '/leave-change/l-9');
+    assert.deepEqual(sentCall.body, { kind: 'EARLY_RETURN', returnDate: '2026-12-09', reason: 'Erken döndüm' });
+  });
+  const refused = ['POST /leave-change/l-9/preview', () => json({ code: 0, message: 'OVERLAP', message_code: 'INVALID_INPUT_PARAMETERS' }, 400)];
+  await withMcp([approvedList, refused], async ({ call }) => {
+    const result = await call('change_leave_request', { leave_id: 'l-9', kind: 'RESCHEDULE', start_date: '2026-12-14', end_date: '2026-12-15' });
+    assert.equal(result.isError, true);
+    assert.match(textOf(result), /overlap another leave/);
   });
 });
 

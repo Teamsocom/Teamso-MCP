@@ -37,7 +37,7 @@ test('every input object that lists properties is closed, at every level', async
       if (Object.keys(tool.inputSchema.properties ?? {}).length > 0) closedRoots += 1;
     }
     // 36 tools take parameters; the 7 without parameters stay an empty object (as with Zod 3)
-    assert.equal(closedRoots, 36);
+    assert.equal(closedRoots, 37);
     for (const name of ['get_me', 'list_leave_types', 'get_my_leave_balance', 'request_leave_otp',
       'list_pending_approvals', 'list_performance_periods', 'request_sms_code']) {
       const tool = tools.find(item => item.name === name);

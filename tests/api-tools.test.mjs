@@ -269,7 +269,7 @@ test('createMcpServer serves only the selected toolsets', async () => {
   await withApi([], async ({ tools }) => {
     assert.deepEqual(tools.map(tool => tool.name), ['list_leave_types', 'get_my_leave_balance', 'calculate_leave_days',
       'request_leave_otp', 'create_leave_request', 'list_my_leaves', 'cancel_leave_request',
-      'list_pending_approvals', 'approve_or_reject_leave']);
+      'change_leave_request', 'list_pending_approvals', 'approve_or_reject_leave']);
   }, { toolsets: 'leave,approvals' });
   assert.throws(() => createMcpServer(createTestClient(createMockApi().fetch), { toolsets: 'bogus' }), /Unknown Teamso toolset/);
 });

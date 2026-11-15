@@ -253,6 +253,15 @@ export interface HelpCacheEntry {
   pending?: Promise<HelpBundle>;
 }
 
+/** TMS-4990: a change to an approved leave. Dates are yyyy-MM-dd; `returnDate` is the day back at work. */
+export interface LeaveChangeInput {
+  kind: 'RESCHEDULE' | 'EARLY_RETURN' | 'CANCEL';
+  startDate?: string;
+  endDate?: string;
+  returnDate?: string;
+  reason?: string;
+}
+
 export class TeamsoClient {
   readonly baseUrl: string;
   readonly helpBaseUrl: string;
@@ -401,6 +410,24 @@ export class TeamsoClient {
 
   async deleteLeave(leaveId: string, signal?: AbortSignal): Promise<TeamsoEnvelope> {
     return this.requestEnvelope('DELETE', `/leave/${segment(leaveId)}`, { signal });
+  }
+
+  /** TMS-4499: the owner withdraws a request still waiting for a decision (no SMS code). */
+  async withdrawLeave(leaveId: string, signal?: AbortSignal): Promise<TeamsoEnvelope> {
+    return this.requestEnvelope('PUT', `/leave/cancel/${segment(leaveId)}`, { signal });
+  }
+
+  /**
+   * TMS-4990: what a change to an approved leave would do (new dates, days back to the balance, whether it goes
+   * for approval). Writes nothing.
+   */
+  async previewLeaveChange(leaveId: string, change: LeaveChangeInput, signal?: AbortSignal): Promise<TeamsoEnvelope> {
+    return this.requestEnvelope('POST', `/leave-change/${segment(leaveId)}/preview`, { body: change, signal });
+  }
+
+  /** TMS-4990: asks for the change (or applies it at once); needs a verified SMS code. */
+  async submitLeaveChange(leaveId: string, change: LeaveChangeInput, signal?: AbortSignal): Promise<TeamsoEnvelope> {
+    return this.requestEnvelope('POST', `/leave-change/${segment(leaveId)}`, { body: change, signal });
   }
 
   /**

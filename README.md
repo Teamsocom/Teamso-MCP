@@ -169,7 +169,8 @@ TEAMSO_ACCESS_TOKEN=tms_pat_your-token
 | `request_leave_otp` | Send the SMS code needed to create or cancel a leave request (valid 3 minutes) |
 | `create_leave_request` | Create a leave request with the SMS code and send it for approval |
 | `list_my_leaves` | Your leave requests with status, filterable by dates and status |
-| `cancel_leave_request` | Cancel one of your leave requests with the SMS code |
+| `cancel_leave_request` | Withdraw a pending leave request, or cancel an approved leave without deleting it (reason and SMS code; kept as Cancelled) |
+| `change_leave_request` | Change the dates of an approved leave or shorten it after an early return: preview first, then send with the SMS code |
 
 ### Approvals
 
@@ -331,7 +332,7 @@ tools a server offers, as a comma-separated list. Default: all tools.
 |---------|-------|
 | `core` | `get_me` |
 | `help` | `search_help_articles`, `get_help_article`, `list_help_modules` |
-| `leave` | `list_leave_types`, `get_my_leave_balance`, `calculate_leave_days`, `request_leave_otp`, `create_leave_request`, `list_my_leaves`, `cancel_leave_request` |
+| `leave` | `list_leave_types`, `get_my_leave_balance`, `calculate_leave_days`, `request_leave_otp`, `create_leave_request`, `list_my_leaves`, `cancel_leave_request`, `change_leave_request` |
 | `approvals` | `list_pending_approvals`, `approve_or_reject_leave` |
 | `employees` | `search_employees`, `get_employee_profile` |
 | `performance` | the ten goal and evaluation tools |

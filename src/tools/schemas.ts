@@ -172,9 +172,32 @@ export const leaveListOutputSchema = {
 
 export const leaveCancelledOutputSchema = {
   cancelled: z.boolean(),
+  /** WITHDRAWN (request still undecided), CANCELLED (approved leave, applied at once) or SENT_FOR_APPROVAL. */
+  outcome: z.enum(['WITHDRAWN', 'CANCELLED', 'SENT_FOR_APPROVAL']),
+  changeId: z.string().optional(),
   leave: leaveSummarySchema,
   closedPayrollPeriods: z.array(z.string()),
   message: z.string(),
+};
+
+/** TMS-4990: change_leave_request (preview without otp_code, the request with it). */
+export const leaveChangeOutputSchema = {
+  submitted: z.boolean(),
+  kind: z.enum(['RESCHEDULE', 'EARLY_RETURN']),
+  leave: leaveSummarySchema,
+  preview: z.object({
+    newStart: z.string().optional(),
+    newEnd: z.string().optional(),
+    newReturnToWork: z.string().optional(),
+    newWorkingDays: z.number().optional(),
+    daysBackToBalance: z.number(),
+    closedPayrollPeriods: z.array(z.string()),
+    appliesAtOnce: z.boolean(),
+  }),
+  status: z.enum(['PREVIEW', 'PENDING', 'APPROVED']),
+  changeId: z.string().optional(),
+  message: z.string(),
+  nextAction: z.object({ tool: z.string(), arguments: z.record(z.string(), z.unknown()), reason: z.string() }).optional(),
 };
 
 // -------------------------------------------------------------- approvals
