@@ -918,3 +918,20 @@ export type ApiCallResponse =
     contentType: string;
     fileName?: string;
   };
+
+/** POST /leave/decision-insights item (TMS-4989). */
+export interface TeamsoLeaveInsight {
+  id: string;
+  balanceAfter?: number | null;
+  teamSize?: number;
+  shiftDays?: string[];
+  clean?: boolean;
+  overlaps?: Array<{
+    userId?: string;
+    name?: string;
+    startDate?: string;
+    endDate?: string;
+    pending?: boolean;
+    typeName?: string | null;
+  }>;
+}

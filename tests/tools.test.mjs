@@ -435,6 +435,30 @@ test('list_pending_approvals returns only leaves the caller can decide', async (
   });
 });
 
+test('list_pending_approvals adds the team summary when the server has it (TMS-4989)', async () => {
+  const insights = [['POST /leave/decision-insights', () => envelope([{
+    id: 'l-2', balanceAfter: -1, teamSize: 4, shiftDays: ['2026-12-08'], clean: false,
+    overlaps: [{ userId: 'u-9', name: 'Ayşe Yılmaz', startDate: '2026-12-08T09:00:00Z', endDate: '2026-12-09T18:00:00Z', pending: true }],
+  }], 'GET_SUCCESS')]];
+  await withMcp(insights, async ({ call, calls }) => {
+    const result = await call('list_pending_approvals');
+    const team = result.structuredContent.approvals[0].team;
+    assert.equal(team.clean, false);
+    assert.equal(team.balanceAfter, -1);
+    assert.deepEqual(team.shiftDays, ['2026-12-08']);
+    assert.deepEqual(team.overlaps, [{ name: 'Ayşe Yılmaz', start: '2026-12-08', end: '2026-12-09', pending: true }]);
+    assert.match(team.summary, /Heads up: 1 more in the team .*Ayşe Yılmaz.*balance after approval -1 days.*planned shift on 2026-12-08/);
+    assert.match(textOf(result), /\| Team \|/);
+    const [post] = callsTo(calls, 'POST', '/leave/decision-insights');
+    assert.deepEqual(post.body, { ids: ["l-2"] });
+  });
+  await withMcp([['POST /leave/decision-insights', () => new Response('', { status: 404 })]], async ({ call }) => {
+    const result = await call('list_pending_approvals');
+    assert.notEqual(result.isError, true, 'an older server without the endpoint still lists the requests');
+    assert.equal(result.structuredContent.approvals[0].team, undefined);
+  });
+});
+
 test('approve_or_reject_leave checks canApprove and sends a path-safe reason', async () => {
   await withMcp([], async ({ call, calls }) => {
     const rejected = await call('approve_or_reject_leave', {

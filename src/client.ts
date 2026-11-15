@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import net from 'node:net';
 import type {
   ApiCallRequest,
+  TeamsoLeaveInsight,
   ApiCallResponse,
   ApiQueryValue,
   HelpBundle,
@@ -415,6 +416,16 @@ export class TeamsoClient {
     const note = pathSafeText(answer ?? '') || LEAVE_ANSWER_PLACEHOLDER;
     const path = `/leave/state/${segment(leaveId)}/${approve}/${segment(note)}`;
     return this.requestEnvelope('PUT', path, { signal });
+  }
+
+  /**
+   * TMS-4989: for each leave the caller may see, the balance after approval, the colleagues of the same team off
+   * (or waiting for leave) on the same dates and the planned shift days. Older servers answer 404; callers treat
+   * that as "no summary".
+   */
+  async getLeaveDecisionInsights(ids: string[], signal?: AbortSignal): Promise<TeamsoLeaveInsight[]> {
+    const result = await this.call<TeamsoLeaveInsight[]>('POST', '/leave/decision-insights', { body: { ids }, signal });
+    return Array.isArray(result) ? result : [];
   }
 
   // -------------------------------------------------------------------- otp

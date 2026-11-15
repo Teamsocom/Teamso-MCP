@@ -189,6 +189,18 @@ export const pendingApprovalSchema = z.object({
   description: z.string().optional(),
   approvalStep: z.number().optional(),
   createdAt: z.string().optional(),
+  team: z.object({
+    summary: z.string(),
+    clean: z.boolean(),
+    balanceAfter: z.number().optional(),
+    shiftDays: z.array(z.string()),
+    overlaps: z.array(z.object({
+      name: z.string(),
+      start: z.string().optional(),
+      end: z.string().optional(),
+      pending: z.boolean(),
+    })),
+  }).optional(),
 });
 
 export const pendingApprovalsOutputSchema = {
