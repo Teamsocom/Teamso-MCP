@@ -1,21 +1,50 @@
 # Changelog
 
-## Unreleased
+## 1.6.0 (not published yet)
+
+Some endpoints these tools call are new: `GET /shift/mcp/my-shifts`, `GET /timesheet-attestation/mcp/me` and
+`/mcp/rounds` (TMS-5154), the forgotten scan endpoints (TMS-5003), the monthly timesheet approval (TMS-5007) and the
+leave change endpoints (TMS-4990). Publish this version after those API changes are live.
+
+### Added
+
+- PDKS, timesheet, shift, expense, ATS and e-onboarding tools (TMS-5154), with the token owner's own Teamso rights.
+  Seventeen tools in six new toolsets:
+  - `pdks`: `get_my_attendance_today` (the caller's day: `GET /pdks-qr/my-status`), `get_team_attendance_today`
+    (counts and the late, absent, at work... people of the caller's scope: `GET /pdks-qr/dashboard` and
+    `/dashboard/detail/{card}`, PDKS manager or admin), `list_my_missed_scans` (`GET /pdks-qr/corrections/me`),
+    `request_missed_scan` (`POST /pdks-qr/corrections`), `list_missed_scan_requests` (`GET /pdks-qr/corrections`)
+    and `decide_missed_scan_request` (`PUT /pdks-qr/corrections/{id}/approve|reject`).
+  - `timesheet`: `list_my_timesheets` (`GET /timesheet-attestation/mcp/me`), `approve_my_timesheet` (SMS code, then
+    `POST /timesheet-attestation/me/{id}/approve`; a month that changed answers with the new version's id),
+    `dispute_my_timesheet` (`POST /timesheet-attestation/me/{id}/dispute`) and `get_timesheet_approval_status`
+    (`GET /timesheet-attestation/mcp/rounds`, TIMESHEET_READ_ALL or TIMESHEET_UPDATE in the caller's branches).
+  - `shift`: `list_my_shifts` (the caller's shared shifts, `GET /shift/mcp/my-shifts`).
+  - `expense`: `list_expense_types`, `list_my_expenses` (`GET /expense-management/groups`, scope `mine` or
+    `approval`) and `create_expense` (draft group, receipts with an optional photo or PDF, department limit check,
+    SMS code, then `POST /expense-form/{id}/finalize`; a group that cannot be sent is deleted again).
+  - `ats`: `list_job_postings` and `list_job_candidates` (stage, CV score and AI criteria fit, no contact details).
+  - `onboarding`: `list_onboarding_candidates` (stage and who has to act next).
+- No write runs without the user's agreement: `request_missed_scan`, `decide_missed_scan_request` and
+  `dispute_my_timesheet` only preview until `confirm: true`; `approve_my_timesheet` and `create_expense` preview, send
+  the SMS code only with `send_sms_code: true` and act only with `otp_code`, so each toolset works on its own. The
+  read tools only read (the timesheet reads use the new as-stored endpoints, so a read only connection can call them).
+- `change_leave_request` (toolset `leave`, TMS-4990): change the dates of an approved leave (`RESCHEDULE`) or shorten
+  it after an early return (`EARLY_RETURN`, `return_date` = the day back at work). Without `otp_code` it previews the
+  change (`POST /leave-change/{id}/preview`: new dates and working days, days back to the balance, closed payroll
+  periods, whether it applies at once); with `otp_code` and `reason` it sends it.
+- The server instructions name the new tools and their Turkish words ("giriş çıkış", "puantaj", "vardiya",
+  "masraf", "ilan", "aday", "e-karşılama").
 
 ### Changed
 
+- `TOOL_NAMES` and `TOOLSETS` list the new tools after the payroll tools, so the generic API tools stay last. No
+  earlier tool was renamed or removed.
 - `cancel_leave_request` no longer deletes a leave (TMS-4990). A request still waiting for a decision is withdrawn
   (`PUT /leave/cancel/{id}`, no SMS code). An approved leave that has not started is cancelled without being deleted
   (`POST /leave-change/{id}` with `kind: CANCEL`, `reason` and the SMS code): it goes through the leave approval
   process unless the company applies it at once, and stays as Cancelled (status 7) with the reason. New output
   fields `outcome` (`WITHDRAWN`, `CANCELLED`, `SENT_FOR_APPROVAL`) and `changeId`.
-
-### Added
-
-- `change_leave_request` (toolset `leave`): change the dates of an approved leave (`RESCHEDULE`) or shorten it after
-  an early return (`EARLY_RETURN`, `return_date` = the day back at work). Without `otp_code` it previews the change
-  (`POST /leave-change/{id}/preview`: new dates and working days, days back to the balance, closed payroll periods,
-  whether it applies at once); with `otp_code` and `reason` it sends it.
 
 ## 1.5.0 (2026-11-11)
 

@@ -861,3 +861,342 @@ export const apiWriteOutputSchema = {
   },
   nextAction: nextActionSchema.optional(),
 };
+
+// ------------------------------------------------- TMS-5154: PDKS (attendance)
+
+const scanTypeSchema = z.enum(['CHECK_IN', 'CHECK_OUT']);
+
+export const myAttendanceOutputSchema = {
+  moduleActive: z.boolean(),
+  serverTime: z.string().optional(),
+  timezone: z.string().optional(),
+  shift: z.object({ planned: z.boolean(), start: z.string().optional(), end: z.string().optional() }),
+  today: z.object({
+    checkedInAt: z.string().optional(),
+    checkedOutAt: z.string().optional(),
+    onBreak: z.boolean(),
+    breakStartedAt: z.string().optional(),
+    late: z.boolean(),
+    nextScan: z.string().optional(),
+  }),
+  excusesToSend: z.array(z.object({
+    anomalyId: z.string(),
+    type: z.string(),
+    date: z.string().optional(),
+    minutes: z.number().optional(),
+  })),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const teamAttendanceOutputSchema = {
+  counts: z.object({
+    cameToday: z.number(),
+    atWork: z.number(),
+    late: z.number(),
+    noShow: z.number(),
+    notStarted: z.number(),
+    earlyLeave: z.number(),
+    onBreak: z.number(),
+    openDiscrepancies: z.number(),
+    pendingExcuses: z.number(),
+  }),
+  locationCount: z.number(),
+  list: z.string(),
+  people: z.array(z.object({
+    userId: z.string().optional(),
+    name: z.string(),
+    at: z.string().optional(),
+    minutes: z.number().optional(),
+    location: z.string().optional(),
+    plannedWindow: z.string().optional(),
+    detail: z.string().optional(),
+  })),
+  total: z.number(),
+  truncated: z.boolean(),
+};
+
+const scanCorrectionSchema = z.object({
+  id: z.string(),
+  employee: z.object({ id: z.string().optional(), fullName: z.string() }).optional(),
+  day: z.string().optional(),
+  type: z.string(),
+  requestedAt: z.string().optional(),
+  reason: z.string().optional(),
+  note: z.string().optional(),
+  status: z.string(),
+  canDecide: z.boolean().optional(),
+  decisionNote: z.string().optional(),
+  decidedAt: z.string().optional(),
+});
+
+export const myMissedScansOutputSchema = {
+  missing: z.array(z.object({
+    day: z.string(),
+    type: z.string(),
+    suggestedAt: z.string().optional(),
+    otherMovementAt: z.string().optional(),
+  })),
+  requests: z.array(scanCorrectionSchema),
+  limits: z.object({
+    maxDaysBack: z.number().optional(),
+    monthlyLimit: z.number().optional(),
+    usedThisMonth: z.number().optional(),
+  }),
+  reasons: z.array(z.string()),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const missedScanRequestOutputSchema = {
+  submitted: z.boolean(),
+  request: z.object({
+    day: z.string(),
+    type: scanTypeSchema,
+    time: z.string(),
+    reason: z.string(),
+    note: z.string().optional(),
+  }),
+  correction: scanCorrectionSchema.optional(),
+  message: z.string(),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const missedScanListOutputSchema = {
+  status: z.enum(['PENDING', 'ALL']),
+  requests: z.array(scanCorrectionSchema),
+  total: z.number(),
+  truncated: z.boolean(),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const missedScanDecisionOutputSchema = {
+  decided: z.boolean(),
+  requestId: z.string(),
+  decision: z.enum(['approved', 'rejected']),
+  request: scanCorrectionSchema.optional(),
+  note: z.string().optional(),
+  message: z.string(),
+  nextAction: nextActionSchema.optional(),
+};
+
+// ---------------------------------------------- TMS-5154: timesheet approval
+
+const timesheetTotalsSchema = z.object({
+  workedDays: z.number().optional(),
+  missingDays: z.number().optional(),
+  leaveDays: z.number().optional(),
+  unpaidLeaveDays: z.number().optional(),
+  sickLeaveDays: z.number().optional(),
+  restDays: z.number().optional(),
+  holidayDays: z.number().optional(),
+  workedHours: z.number().optional(),
+  plannedHours: z.number().optional(),
+  overtimeHours: z.number().optional(),
+  waitingOvertimeHours: z.number().optional(),
+});
+
+const timesheetMonthSchema = z.object({
+  id: z.string(),
+  period: z.string(),
+  status: z.string(),
+  reapproval: z.boolean(),
+  version: z.number().optional(),
+  sentAt: z.string().optional(),
+  respondedAt: z.string().optional(),
+  openDisputes: z.number(),
+  disputedDays: z.array(z.string()),
+  totals: timesheetTotalsSchema,
+});
+
+export const myTimesheetsOutputSchema = {
+  months: z.array(timesheetMonthSchema),
+  total: z.number(),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const timesheetApprovalOutputSchema = {
+  approved: z.boolean(),
+  timesheetId: z.string(),
+  month: timesheetMonthSchema.optional(),
+  status: z.string(),
+  smsSent: z.boolean(),
+  newTimesheetId: z.string().optional(),
+  message: z.string(),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const timesheetDisputeOutputSchema = {
+  disputed: z.boolean(),
+  timesheetId: z.string(),
+  month: timesheetMonthSchema.optional(),
+  days: z.array(z.object({ day: z.string(), note: z.string() })),
+  note: z.string().optional(),
+  status: z.string(),
+  message: z.string(),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const timesheetRoundsOutputSchema = {
+  period: z.string(),
+  counts: z.object({ total: z.number(), approved: z.number(), pending: z.number(), disputed: z.number() }),
+  notSent: z.number(),
+  monthOver: z.boolean(),
+  canSend: z.boolean(),
+  employees: z.array(z.object({
+    timesheetId: z.string(),
+    userId: z.string().optional(),
+    name: z.string(),
+    personnelId: z.string().optional(),
+    branchName: z.string().optional(),
+    departmentName: z.string().optional(),
+    status: z.string(),
+    reapproval: z.boolean(),
+    sentAt: z.string().optional(),
+    respondedAt: z.string().optional(),
+    openDisputes: z.number(),
+    disputedDays: z.array(z.string()),
+    missingDays: z.number().optional(),
+  })),
+  total: z.number(),
+  truncated: z.boolean(),
+};
+
+// ----------------------------------------------------------- TMS-5154: shift
+
+export const myShiftsOutputSchema = {
+  from: z.string(),
+  to: z.string(),
+  shifts: z.array(z.object({
+    id: z.string(),
+    date: z.string(),
+    dayName: z.string().optional(),
+    working: z.boolean(),
+    start: z.string().optional(),
+    end: z.string().optional(),
+    overnight: z.boolean(),
+    workingType: z.string().optional(),
+    branchName: z.string().optional(),
+    note: z.string().optional(),
+    breaks: z.array(z.object({ start: z.string().optional(), end: z.string().optional() })),
+  })),
+  total: z.number(),
+};
+
+// --------------------------------------------------------- TMS-5154: expense
+
+export const expenseStatusSchema = z.enum(['draft', 'in_approval', 'waiting_payment', 'paid', 'rejected', 'in_revision', 'other']);
+
+export const expenseTypesOutputSchema = {
+  expenseTypes: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    currency: z.string().optional(),
+    maxAmount: z.number().optional(),
+    description: z.string().optional(),
+    allowLimitOverrun: z.boolean().optional(),
+  })),
+};
+
+const moneySchema = z.object({ currency: z.string(), amount: z.number(), payable: z.number().optional() });
+
+export const expenseGroupsOutputSchema = {
+  scope: z.enum(['mine', 'approval']),
+  groups: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    status: expenseStatusSchema,
+    statusCode: z.string(),
+    owner: z.string().optional(),
+    receiptCount: z.number(),
+    totals: z.array(moneySchema),
+    createdAt: z.string().optional(),
+    submittedAt: z.string().optional(),
+    step: z.string().optional(),
+    revisionNo: z.number().optional(),
+    limitOverrun: z.boolean(),
+    answer: z.string().optional(),
+  })),
+  total: z.number(),
+};
+
+export const expenseCreatedOutputSchema = {
+  submitted: z.boolean(),
+  smsSent: z.boolean(),
+  groupId: z.string().optional(),
+  title: z.string(),
+  receipts: z.array(z.object({
+    expenseTypeId: z.string(),
+    expenseTypeName: z.string().optional(),
+    amount: z.number(),
+    currency: z.string(),
+    date: z.string(),
+    description: z.string(),
+    taxRate: z.number(),
+    paidBy: z.enum(['employee', 'company_card']),
+    file: z.string().optional(),
+  })),
+  totals: z.array(moneySchema),
+  problems: z.array(z.string()),
+  limitWarnings: z.number().optional(),
+  message: z.string(),
+  nextAction: nextActionSchema.optional(),
+};
+
+// ------------------------------------------------------------- TMS-5154: ATS
+
+export const jobPostingsOutputSchema = {
+  postings: z.array(z.object({
+    id: z.string(),
+    position: z.string(),
+    status: z.string(),
+    applicants: z.number(),
+    location: z.string().optional(),
+    workModel: z.string().optional(),
+    workingType: z.string().optional(),
+    departments: z.array(z.string()),
+    publishedOn: z.string().optional(),
+    daysOpen: z.number().optional(),
+  })),
+  allCandidates: z.number().optional(),
+  total: z.number(),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const jobCandidatesOutputSchema = {
+  jobPostingId: z.string(),
+  candidates: z.array(z.object({
+    id: z.string(),
+    fullName: z.string(),
+    status: z.string().optional(),
+    subStatus: z.string().optional(),
+    cvScore: z.number().optional(),
+    criteriaFit: z.number().optional(),
+    location: z.string().optional(),
+    experience: z.string().optional(),
+    favorite: z.boolean(),
+    appliedAt: z.string().optional(),
+  })),
+  stageCounts: z.record(z.string(), z.number()),
+  total: z.number(),
+  truncated: z.boolean(),
+};
+
+// ------------------------------------------------------ TMS-5154: onboarding
+
+export const onboardingCandidatesOutputSchema = {
+  candidates: z.array(z.object({
+    id: z.string(),
+    fullName: z.string(),
+    branchName: z.string().optional(),
+    status: z.string(),
+    stage: z.string(),
+    waitingOn: z.enum(['candidate', 'hr', 'approver', 'system', 'nobody']),
+    startDate: z.string().optional(),
+    emailConfirmed: z.boolean(),
+    phoneConfirmed: z.boolean(),
+    approvalStep: z.number().optional(),
+    rejectReason: z.string().optional(),
+    transferFailed: z.boolean(),
+  })),
+  total: z.number(),
+  truncated: z.boolean(),
+};

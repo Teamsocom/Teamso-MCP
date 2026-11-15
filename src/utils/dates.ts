@@ -109,3 +109,21 @@ export function toDisplayDateTime(value: string | number | null | undefined): st
   if (instant) return formatWallClock(instant.date, instant.time);
   return typeof value === 'string' ? value : undefined;
 }
+
+/**
+ * TMS-5154: any API time for display as Turkey wall clock (`yyyy-MM-dd HH:mm`): instants are converted, Jackson
+ * `[y, M, d, H, m]` arrays and offset-less ISO text (`2026-11-16T09:12:00`, a LocalDateTime) are taken as they are.
+ */
+export function toWallClock(value: string | number | number[] | null | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    const [y, m, d, h = 0, min = 0] = value;
+    if (!y || !m || !d) return undefined;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${y}-${pad(m)}-${pad(d)} ${pad(h)}:${pad(min)}`;
+  }
+  if (typeof value === 'string') {
+    const local = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?$/.exec(value.trim());
+    if (local) return `${local[1]} ${local[2]}`;
+  }
+  return toDisplayDateTime(value ?? undefined);
+}

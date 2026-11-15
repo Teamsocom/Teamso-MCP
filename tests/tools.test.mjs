@@ -31,6 +31,13 @@ const EXPECTED_TOOLS = [
   'list_cost_forecasts', 'get_cost_forecast_summary', 'get_cost_forecast_breakdown',
   'list_announcements',
   'list_my_payslips', 'get_payslip_pdf',
+  'get_my_attendance_today', 'get_team_attendance_today', 'list_my_missed_scans', 'request_missed_scan',
+  'list_missed_scan_requests', 'decide_missed_scan_request',
+  'list_my_timesheets', 'approve_my_timesheet', 'dispute_my_timesheet', 'get_timesheet_approval_status',
+  'list_my_shifts',
+  'list_expense_types', 'list_my_expenses', 'create_expense',
+  'list_job_postings', 'list_job_candidates',
+  'list_onboarding_candidates',
   'find_api_endpoints', 'list_api_modules', 'describe_api_endpoint', 'call_api_read', 'call_api_write',
   'request_sms_code',
 ];
