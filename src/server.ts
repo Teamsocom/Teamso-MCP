@@ -56,7 +56,9 @@ export const DEFAULT_INSTRUCTIONS = [
   'Goals use the period title from list_performance_periods. create_user_goal makes a draft (check canAddGoal in '
     + 'list_my_goals first and keep a person\'s weights at 100), send_goals_to_approval sends drafts. In '
     + 'list_team_goals, canApproveGoal means approve_goal (or revise_and_approve_goal to change it first) and '
-    + 'canApproveEvaluation means approve_goal_evaluation.',
+    + 'canApproveEvaluation means approve_goal_evaluation. During the period ("hedefime ilerleme ekle", "hedef '
+    + 'durumu", "riskte"): add_goal_progress records the value reached so far (or the percent of an OTHER goal), '
+    + 'ON_TRACK / AT_RISK / LATE and a comment; it previews until confirm=true.',
   'Payslips contain salary data: show them only to their owner (list_my_payslips, then get_payslip_pdf). "Why did my '
     + 'pay go down" ("maaşım neden düştü", "bordromu açıkla", "vergi dilimi"): explain_my_payslip (latest payslip, or '
     + 'month / payslip_id) gives the reasons, every line explained, year to date totals and the tax band warning.',
@@ -83,7 +85,7 @@ export const DEFAULT_INSTRUCTIONS = [
   'Expenses ("masraf", "harcama", "fiş"): list_expense_types → create_expense (preview, then the SMS code sends the '
     + 'group); list_my_expenses shows the status (scope "approval" for groups the user approves). Recruiting ("ilan", '
     + '"aday"): list_job_postings → list_job_candidates. E-onboarding ("e-karşılama"): list_onboarding_candidates.',
-  'Writes without an SMS code (request_missed_scan, decide_missed_scan_request, dispute_my_timesheet) return a preview '
+  'Writes without an SMS code (request_missed_scan, decide_missed_scan_request, dispute_my_timesheet, add_goal_progress) return a preview '
     + 'until confirm=true; writes with one (approve_my_timesheet, create_expense) preview, send the code with '
     + 'send_sms_code=true after the user agrees, and act with otp_code.',
   'Confirm every write (leave requests, cancellations, approvals, goal changes, badges, missed scans, timesheet answers, '

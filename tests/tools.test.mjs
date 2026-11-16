@@ -25,7 +25,7 @@ const EXPECTED_TOOLS = [
   'search_employees', 'get_employee_profile',
   'list_performance_periods', 'list_my_goals', 'list_team_goals', 'create_user_goal',
   'send_goals_to_approval', 'approve_goal', 'revise_and_approve_goal', 'update_goal_actual_value',
-  'update_manager_actual_value', 'approve_goal_evaluation',
+  'update_manager_actual_value', 'approve_goal_evaluation', 'add_goal_progress',
   'list_badges', 'give_badge', 'list_my_badges',
   'list_simulation_assignments', 'get_simulation_results', 'list_simulations',
   'list_cost_forecasts', 'get_cost_forecast_summary', 'get_cost_forecast_breakdown',

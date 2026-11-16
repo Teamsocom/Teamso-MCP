@@ -53,6 +53,7 @@ import {
   registerListMyTimesheets,
 } from './timesheet.js';
 import {
+  registerAddGoalProgress,
   registerApproveGoal,
   registerApproveGoalEvaluation,
   registerCreateUserGoal,
@@ -104,6 +105,7 @@ const REGISTRARS = {
   update_goal_actual_value: registerUpdateGoalActualValue,
   update_manager_actual_value: registerUpdateManagerActualValue,
   approve_goal_evaluation: registerApproveGoalEvaluation,
+  add_goal_progress: registerAddGoalProgress,
   list_badges: registerListBadges,
   give_badge: registerGiveBadge,
   list_my_badges: registerListMyBadges,
@@ -176,6 +178,7 @@ export const TOOLSETS = Object.freeze({
     'update_goal_actual_value',
     'update_manager_actual_value',
     'approve_goal_evaluation',
+    'add_goal_progress',
   ]),
   badges: Object.freeze(['list_badges', 'give_badge', 'list_my_badges']),
   simulation: Object.freeze(['list_simulation_assignments', 'get_simulation_results', 'list_simulations']),
@@ -297,6 +300,7 @@ export {
   registerUpdateGoalActualValue,
   registerUpdateManagerActualValue,
   registerApproveGoalEvaluation,
+  registerAddGoalProgress,
   registerListBadges,
   registerGiveBadge,
   registerListMyBadges,

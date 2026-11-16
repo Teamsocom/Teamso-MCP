@@ -349,6 +349,53 @@ export interface TeamsoGoalPage {
   pagination?: TeamsoPagination;
 }
 
+/** One progress check-in of a goal (TMS-5065), newest first in {@link TeamsoGoalProgressCard.entries}. */
+export interface TeamsoGoalProgressEntry {
+  id: string;
+  value?: number | null;
+  percent?: number | null;
+  status?: string | null;
+  comment?: string | null;
+  fileName?: string | null;
+  hasFile?: boolean;
+  createdAt?: string | null;
+  createdBy?: string | null;
+  createdByName?: string | null;
+  byOwner?: boolean;
+}
+
+/** `GET` and `POST /user-goal-progress/goal/{goalId}` (TMS-5065): the goal's progress card. */
+export interface TeamsoGoalProgressCard {
+  goalId: string;
+  goalName?: string | null;
+  userId?: string | null;
+  periodName?: string | null;
+  scaleCriterion?: string | null;
+  currency?: string | null;
+  otherText?: string | null;
+  isOther?: boolean;
+  targetValue?: number | null;
+  open?: boolean;
+  canAddProgress?: boolean;
+  /** `PERIOD_NOT_ACTIVE` or `GOAL_NOT_OPEN` when the goal takes no check-in now. */
+  closedReason?: string | null;
+  elapsedPercent?: number | null;
+  lastProgressValue?: number | null;
+  lastProgressPercent?: number | null;
+  lastProgressStatus?: string | null;
+  lastProgressAt?: string | null;
+  entries?: TeamsoGoalProgressEntry[];
+}
+
+/** Body of `POST /user-goal-progress/goal/{goalId}`. */
+export interface TeamsoGoalProgressRequest {
+  value?: number;
+  percent?: number;
+  status: string;
+  comment?: string;
+  withFile?: boolean;
+}
+
 /** Body of `POST /user-goal` and `PUT /user-goal/revise-and-approve/{id}` (`UserGoalRequestVo`). */
 export interface TeamsoGoalRequest {
   userId?: string;

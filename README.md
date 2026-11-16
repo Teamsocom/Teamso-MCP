@@ -201,6 +201,7 @@ TEAMSO_ACCESS_TOKEN=tms_pat_your-token
 | `update_goal_actual_value` | Enter the achieved value of your goal during evaluation |
 | `update_manager_actual_value` | Enter your assessment of an employee's goal as their manager |
 | `approve_goal_evaluation` | Approve an employee's evaluation for a period |
+| `add_goal_progress` | Add progress to a goal during its period: value so far (or percent), on track / at risk / late, a comment (preview, then `confirm: true`) |
 
 ### Badges
 
@@ -384,7 +385,7 @@ tools a server offers, as a comma-separated list. Default: all tools.
 | `leave` | `list_leave_types`, `get_my_leave_balance`, `calculate_leave_days`, `request_leave_otp`, `create_leave_request`, `list_my_leaves`, `cancel_leave_request`, `change_leave_request` |
 | `approvals` | `list_pending_approvals`, `approve_or_reject_leave` |
 | `employees` | `search_employees`, `get_employee_profile` |
-| `performance` | the ten goal and evaluation tools |
+| `performance` | the eleven goal, progress and evaluation tools |
 | `badges` | `list_badges`, `give_badge`, `list_my_badges` |
 | `simulation` | `list_simulation_assignments`, `get_simulation_results`, `list_simulations` |
 | `cost_forecast` | `list_cost_forecasts`, `get_cost_forecast_summary`, `get_cost_forecast_breakdown` |
@@ -514,7 +515,7 @@ const client = new TeamsoClient(userToken, 'https://api.teamso.com/v1', {
 
 | Export | Description |
 |--------|-------------|
-| `createMcpServer(client, options?)` | Creates an McpServer with all 62 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
+| `createMcpServer(client, options?)` | Creates an McpServer with all 63 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
 | `TeamsoClient` | Teamso REST client (personal access token, envelope handling, optional trusted-proxy signing) |
 | `TeamsoApiError` | Error with `status`, `messageCode`, `apiMessage` and the response `body` |
 | `registerTools(server, client, options?)` | Register the tools (optionally only some `toolsets`) on an existing McpServer |

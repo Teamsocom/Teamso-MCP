@@ -61,7 +61,7 @@ test('the stdio binary answers initialize and tools/list', async () => {
   assert.equal(initialize.result.serverInfo.version, VERSION);
   assert.match(initialize.result.instructions, /request_leave_otp/);
   assert.equal(list.result.tools.length, TOOL_NAMES.length);
-  assert.equal(list.result.tools.length, 62);
+  assert.equal(list.result.tools.length, 63);
   assert.match(initialize.result.instructions, /find_api_endpoints/);
   assert.match(stderr, /running on stdio \(api: https:\/\/api\.teamso\.com\/v1\)/);
 });

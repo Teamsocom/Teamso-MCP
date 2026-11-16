@@ -22,6 +22,8 @@ import type {
   TeamsoFileDownload,
   TeamsoGoal,
   TeamsoGoalPage,
+  TeamsoGoalProgressCard,
+  TeamsoGoalProgressRequest,
   TeamsoGoalRequest,
   TeamsoLeaveControl,
   TeamsoLeaveCreateRequest,
@@ -556,6 +558,23 @@ export class TeamsoClient {
 
   async getGoal(goalId: string, signal?: AbortSignal): Promise<TeamsoGoal> {
     return this.call<TeamsoGoal>('GET', `/user-goal/${segment(goalId)}`, { signal });
+  }
+
+  /** TMS-5065: the goal's progress card (target, latest check-in, whether the caller may add one, history). */
+  async getGoalProgress(goalId: string, signal?: AbortSignal): Promise<TeamsoGoalProgressCard> {
+    return this.call<TeamsoGoalProgressCard>('GET', `/user-goal-progress/goal/${segment(goalId)}`, { signal });
+  }
+
+  /** TMS-5065: adds a progress check-in (only while the period runs); answers the updated card. */
+  async addGoalProgress(
+    goalId: string,
+    request: TeamsoGoalProgressRequest,
+    signal?: AbortSignal,
+  ): Promise<TeamsoGoalProgressCard> {
+    return this.call<TeamsoGoalProgressCard>('POST', `/user-goal-progress/goal/${segment(goalId)}`, {
+      body: request,
+      signal,
+    });
   }
 
   async createGoal(request: TeamsoGoalRequest, signal?: AbortSignal): Promise<TeamsoGoal> {

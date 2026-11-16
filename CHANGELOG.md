@@ -3,7 +3,7 @@
 ## 1.6.0 (not published yet)
 
 Some endpoints these tools call are new: `GET /payroll/me/payslip-view` and `GET /payroll/payslip-view/{id}`
-(TMS-5021), `GET /shift/mcp/my-shifts`, `GET /timesheet-attestation/mcp/me` and `/mcp/rounds` (TMS-5154), the forgotten scan endpoints (TMS-5003), the monthly timesheet approval (TMS-5007) and the
+(TMS-5021), `GET` and `POST /user-goal-progress/goal/{goalId}` (TMS-5065), `GET /shift/mcp/my-shifts`, `GET /timesheet-attestation/mcp/me` and `/mcp/rounds` (TMS-5154), the forgotten scan endpoints (TMS-5003), the monthly timesheet approval (TMS-5007) and the
 leave change endpoints (TMS-4990). Publish this version after those API changes are live.
 
 ### Added
@@ -40,12 +40,20 @@ leave change endpoints (TMS-4990). Publish this version after those API changes 
   it after an early return (`EARLY_RETURN`, `return_date` = the day back at work). Without `otp_code` it previews the
   change (`POST /leave-change/{id}/preview`: new dates and working days, days back to the balance, closed payroll
   periods, whether it applies at once); with `otp_code` and `reason` it sends it.
+- `add_goal_progress` (toolset `performance`, TMS-5065): add progress to a goal during its period ("hedefime
+  ilerleme ekle"): the value reached so far (numeric goals, `value`) or the percent done (`OTHER` goals, `percent`),
+  `ON_TRACK`, `AT_RISK` or `LATE` and an optional comment. It reads the goal's progress card first
+  (`GET /user-goal-progress/goal/{id}`) and answers in plain words when the period is not running, the goal is not
+  approved or already evaluated, or the caller is not its owner, direct manager or a performance admin. Without
+  `confirm: true` it only previews (with the percent of the target and the last check-ins); with it the check-in is
+  saved (`POST /user-goal-progress/goal/{id}`) and kept in the goal's history. Files are attached in the web app.
 - The server instructions name the new tools and their Turkish words ("giriş çıkış", "puantaj", "vardiya",
   "masraf", "ilan", "aday", "e-karşılama").
 
 ### Changed
 
-- `TOOL_NAMES` and `TOOLSETS` list the new tools after the payroll tools, so the generic API tools stay last. No
+- `TOOL_NAMES` and `TOOLSETS` list the new tools after the payroll tools (`add_goal_progress` after
+  `approve_goal_evaluation`), so the generic API tools stay last. No
   earlier tool was renamed or removed.
 - `cancel_leave_request` no longer deletes a leave (TMS-4990). A request still waiting for a decision is withdrawn
   (`PUT /leave/cancel/{id}`, no SMS code). An approved leave that has not started is cancelled without being deleted

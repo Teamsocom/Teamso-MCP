@@ -343,6 +343,33 @@ export const goalListOutputSchema = {
   nextAction: nextActionSchema.optional(),
 };
 
+const goalProgressStatusSchema = z.enum(['ON_TRACK', 'AT_RISK', 'LATE']);
+
+/** TMS-5065: `add_goal_progress` (preview or saved check-in, and the goal's latest history). */
+export const goalProgressOutputSchema = {
+  saved: z.boolean(),
+  goalId: z.string(),
+  goalName: z.string().optional(),
+  period: z.string().optional(),
+  target: z.number().optional(),
+  progress: z.object({
+    value: z.number().optional(),
+    percent: z.number().optional(),
+    status: goalProgressStatusSchema,
+    comment: z.string().optional(),
+  }),
+  history: z.array(z.object({
+    value: z.number().optional(),
+    percent: z.number().optional(),
+    status: z.string().optional(),
+    comment: z.string().optional(),
+    createdAt: z.string().optional(),
+    createdBy: z.string().optional(),
+  })).optional(),
+  message: z.string(),
+  nextAction: nextActionSchema.optional(),
+};
+
 export const goalOutputSchema = {
   goal: goalSchema,
   message: z.string(),
