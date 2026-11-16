@@ -30,7 +30,7 @@ const EXPECTED_TOOLS = [
   'list_simulation_assignments', 'get_simulation_results', 'list_simulations',
   'list_cost_forecasts', 'get_cost_forecast_summary', 'get_cost_forecast_breakdown',
   'list_announcements',
-  'list_my_payslips', 'get_payslip_pdf',
+  'list_my_payslips', 'explain_my_payslip', 'get_payslip_pdf',
   'get_my_attendance_today', 'get_team_attendance_today', 'list_my_missed_scans', 'request_missed_scan',
   'list_missed_scan_requests', 'decide_missed_scan_request',
   'list_my_timesheets', 'approve_my_timesheet', 'dispute_my_timesheet', 'get_timesheet_approval_status',

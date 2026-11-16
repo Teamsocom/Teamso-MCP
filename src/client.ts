@@ -31,6 +31,7 @@ import type {
   TeamsoLeaveTypeBalance,
   TeamsoPayslipListParams,
   TeamsoPayslipPage,
+  TeamsoPayslipView,
   TeamsoPendingTransaction,
   TeamsoPerformanceSettings,
   TeamsoPublicHolidayCalendar,
@@ -790,6 +791,18 @@ export class TeamsoClient {
       contentType: contentType.split(';')[0]!.trim(),
       fileName: fileNameFromDisposition(response.headers.get('content-disposition')),
     };
+  }
+
+  /**
+   * The interactive payslip (TMS-5021): lines with plain explanations, the change against the previous payslip and
+   * its reasons, year to date totals and the tax band hint. With an id one e-payslip
+   * (`GET /payroll/payslip-view/{id}`), otherwise the caller's own payslip of `month` (`yyyy-MM`, latest when empty).
+   */
+  async getPayslipView(params: { payslipId?: string; month?: string } = {}, signal?: AbortSignal): Promise<TeamsoPayslipView> {
+    if (params.payslipId) {
+      return this.call<TeamsoPayslipView>('GET', `/payroll/payslip-view/${segment(params.payslipId)}`, { signal });
+    }
+    return this.call<TeamsoPayslipView>('GET', '/payroll/me/payslip-view', { query: { month: params.month }, signal });
   }
 
   // ------------------------------------------------------- PDKS (TMS-5154)

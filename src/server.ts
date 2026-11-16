@@ -57,7 +57,9 @@ export const DEFAULT_INSTRUCTIONS = [
     + 'list_my_goals first and keep a person\'s weights at 100), send_goals_to_approval sends drafts. In '
     + 'list_team_goals, canApproveGoal means approve_goal (or revise_and_approve_goal to change it first) and '
     + 'canApproveEvaluation means approve_goal_evaluation.',
-  'Payslips contain salary data: show them only to their owner (list_my_payslips, then get_payslip_pdf).',
+  'Payslips contain salary data: show them only to their owner (list_my_payslips, then get_payslip_pdf). "Why did my '
+    + 'pay go down" ("maaşım neden düştü", "bordromu açıkla", "vergi dilimi"): explain_my_payslip (latest payslip, or '
+    + 'month / payslip_id) gives the reasons, every line explained, year to date totals and the tax band warning.',
   'If search_help_articles finds nothing, browse with list_help_modules.',
   'Badges ("rozet", "takdir"): search_employees for the people, list_badges for what the user may give, confirm the '
     + 'badge, the people and the message, then give_badge. list_my_badges shows the badges the user received.',

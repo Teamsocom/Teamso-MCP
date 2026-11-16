@@ -2,12 +2,19 @@
 
 ## 1.6.0 (not published yet)
 
-Some endpoints these tools call are new: `GET /shift/mcp/my-shifts`, `GET /timesheet-attestation/mcp/me` and
-`/mcp/rounds` (TMS-5154), the forgotten scan endpoints (TMS-5003), the monthly timesheet approval (TMS-5007) and the
+Some endpoints these tools call are new: `GET /payroll/me/payslip-view` and `GET /payroll/payslip-view/{id}`
+(TMS-5021), `GET /shift/mcp/my-shifts`, `GET /timesheet-attestation/mcp/me` and `/mcp/rounds` (TMS-5154), the forgotten scan endpoints (TMS-5003), the monthly timesheet approval (TMS-5007) and the
 leave change endpoints (TMS-4990). Publish this version after those API changes are live.
 
 ### Added
 
+- `explain_my_payslip` (toolset `payroll`, TMS-5021), read only: "why did my pay go down" ("maaşım neden düştü")
+  from the caller's own closed payslip, the latest one or `month` (`yyyy-MM`) or `payslip_id`
+  (`GET /payroll/me/payslip-view`, `GET /payroll/payslip-view/{id}`). It returns the net pay against the previous
+  payslip with its reasons by category (days worked, overtime, a new or ended item, tax band, minimum wage
+  exemption, social security ceiling), the changed lines with last month's amount and reason, every line with a
+  plain explanation, year to date totals of closed periods and the tax band warning. No AI credit is used. Payslips
+  uploaded as PDF and open periods answer `PAYSLIP_VIEW_NOT_AVAILABLE`, someone else's payslip `PERMISSION_DENIED`.
 - PDKS, timesheet, shift, expense, ATS and e-onboarding tools (TMS-5154), with the token owner's own Teamso rights.
   Seventeen tools in six new toolsets:
   - `pdks`: `get_my_attendance_today` (the caller's day: `GET /pdks-qr/my-status`), `get_team_attendance_today`

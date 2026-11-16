@@ -706,6 +706,57 @@ export const payslipListOutputSchema = {
   nextAction: nextActionSchema.optional(),
 };
 
+export const payslipExplanationOutputSchema = {
+  payslipId: z.string(),
+  period: z.string(),
+  previousPeriod: z.string().optional(),
+  netPay: z.number(),
+  previousNetPay: z.number().optional(),
+  netChange: z.number().optional(),
+  summary: z.string().optional(),
+  reasons: z.array(z.object({
+    category: z.string(),
+    label: z.string(),
+    amount: z.number(),
+  })),
+  changedLines: z.array(z.object({
+    key: z.string(),
+    label: z.string(),
+    kind: z.string(),
+    amount: z.number(),
+    previous: z.number().optional(),
+    change: z.number().optional(),
+    status: z.string(),
+    reason: z.string().optional(),
+    reasonText: z.string().optional(),
+  })),
+  lines: z.array(z.object({
+    key: z.string(),
+    label: z.string(),
+    kind: z.string(),
+    amount: z.number(),
+    explanation: z.string().optional(),
+  })),
+  yearToDate: z.object({
+    year: z.number(),
+    months: z.array(z.string()),
+    gross: z.number(),
+    net: z.number(),
+    incomeTax: z.number(),
+    stampTax: z.number(),
+    socialSecurity: z.number(),
+  }).optional(),
+  taxBracket: z.object({
+    band: z.number(),
+    rate: z.number().optional(),
+    state: z.string(),
+    crossesNextMonth: z.boolean(),
+    nextPeriod: z.string().optional(),
+    remaining: z.number().optional(),
+    text: z.string().optional(),
+  }).optional(),
+};
+
 export const payslipPdfOutputSchema = {
   payslipId: z.string(),
   fileName: z.string(),

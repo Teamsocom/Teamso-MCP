@@ -36,7 +36,7 @@ import {
 import { registerListJobCandidates, registerListJobPostings } from './ats.js';
 import { registerCreateExpense, registerListExpenseTypes, registerListMyExpenses } from './expense.js';
 import { registerListOnboardingCandidates } from './onboarding.js';
-import { registerGetPayslipPdf, registerListMyPayslips } from './payroll.js';
+import { registerExplainMyPayslip, registerGetPayslipPdf, registerListMyPayslips } from './payroll.js';
 import {
   registerDecideMissedScanRequest,
   registerGetMyAttendanceToday,
@@ -115,6 +115,7 @@ const REGISTRARS = {
   get_cost_forecast_breakdown: registerGetCostForecastBreakdown,
   list_announcements: registerListAnnouncements,
   list_my_payslips: registerListMyPayslips,
+  explain_my_payslip: registerExplainMyPayslip,
   get_payslip_pdf: registerGetPayslipPdf,
   get_my_attendance_today: registerGetMyAttendanceToday,
   get_team_attendance_today: registerGetTeamAttendanceToday,
@@ -180,7 +181,7 @@ export const TOOLSETS = Object.freeze({
   simulation: Object.freeze(['list_simulation_assignments', 'get_simulation_results', 'list_simulations']),
   cost_forecast: Object.freeze(['list_cost_forecasts', 'get_cost_forecast_summary', 'get_cost_forecast_breakdown']),
   communication: Object.freeze(['list_announcements']),
-  payroll: Object.freeze(['list_my_payslips', 'get_payslip_pdf']),
+  payroll: Object.freeze(['list_my_payslips', 'explain_my_payslip', 'get_payslip_pdf']),
   pdks: Object.freeze([
     'get_my_attendance_today',
     'get_team_attendance_today',
@@ -307,6 +308,7 @@ export {
   registerGetCostForecastBreakdown,
   registerListAnnouncements,
   registerListMyPayslips,
+  registerExplainMyPayslip,
   registerGetPayslipPdf,
   registerGetMyAttendanceToday,
   registerGetTeamAttendanceToday,

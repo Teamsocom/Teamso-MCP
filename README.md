@@ -118,6 +118,7 @@ Ask your AI assistant:
 - *"Who is Can Öztürk's manager?"*
 - *"Show my goals for Q4 2026 and send the drafts for approval"*
 - *"Open my September payslip"*
+- *"Why did my pay go down this month?"*
 - *"Teamso'da performans hedefi nasıl girilir?"*
 
 ## Authentication
@@ -244,6 +245,7 @@ calculated and changed in the Teamso web app
 | Tool | Description |
 |------|-------------|
 | `list_my_payslips` | Your e-payslips by term with status |
+| `explain_my_payslip` | Why your pay changed: reasons against last month, every line explained, year to date totals, tax band warning |
 | `get_payslip_pdf` | One payslip as an embedded `application/pdf` resource |
 
 ### PDKS (time tracking)
@@ -387,7 +389,7 @@ tools a server offers, as a comma-separated list. Default: all tools.
 | `simulation` | `list_simulation_assignments`, `get_simulation_results`, `list_simulations` |
 | `cost_forecast` | `list_cost_forecasts`, `get_cost_forecast_summary`, `get_cost_forecast_breakdown` |
 | `communication` | `list_announcements` |
-| `payroll` | `list_my_payslips`, `get_payslip_pdf` |
+| `payroll` | `list_my_payslips`, `explain_my_payslip`, `get_payslip_pdf` |
 | `pdks` | `get_my_attendance_today`, `get_team_attendance_today`, `list_my_missed_scans`, `request_missed_scan`, `list_missed_scan_requests`, `decide_missed_scan_request` |
 | `timesheet` | `list_my_timesheets`, `approve_my_timesheet`, `dispute_my_timesheet`, `get_timesheet_approval_status` |
 | `shift` | `list_my_shifts` |
@@ -512,7 +514,7 @@ const client = new TeamsoClient(userToken, 'https://api.teamso.com/v1', {
 
 | Export | Description |
 |--------|-------------|
-| `createMcpServer(client, options?)` | Creates an McpServer with all 61 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
+| `createMcpServer(client, options?)` | Creates an McpServer with all 62 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
 | `TeamsoClient` | Teamso REST client (personal access token, envelope handling, optional trusted-proxy signing) |
 | `TeamsoApiError` | Error with `status`, `messageCode`, `apiMessage` and the response `body` |
 | `registerTools(server, client, options?)` | Register the tools (optionally only some `toolsets`) on an existing McpServer |

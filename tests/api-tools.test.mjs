@@ -257,7 +257,7 @@ test('resolveToolsets accepts lists, strings and all, and rejects unknown names'
   assert.deepEqual(resolveToolsets(), [...TOOL_NAMES]);
   assert.deepEqual(resolveToolsets(''), [...TOOL_NAMES]);
   assert.deepEqual(resolveToolsets('all'), [...TOOL_NAMES]);
-  assert.deepEqual(resolveToolsets(' Payroll , core'), ['get_me', 'list_my_payslips', 'get_payslip_pdf']);
+  assert.deepEqual(resolveToolsets(' Payroll , core'), ['get_me', 'list_my_payslips', 'explain_my_payslip', 'get_payslip_pdf']);
   assert.deepEqual(resolveToolsets(['communication']), ['list_announcements']);
   assert.throws(() => resolveToolsets('leave,nope'), /Unknown Teamso toolset\(s\): nope\. Valid toolsets: core, help/);
 });

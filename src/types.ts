@@ -415,6 +415,70 @@ export interface TeamsoPayslipListParams {
   searchValue?: string;
 }
 
+/** One line of the interactive payslip (TMS-5021). */
+export interface TeamsoPayslipViewLine {
+  key?: string;
+  code?: string | null;
+  /** EARNING, TOTAL, DEDUCTION, ADDITION or NET. */
+  kind?: string;
+  label?: string | null;
+  amount?: number | null;
+  explainKey?: string | null;
+  text?: string | null;
+  previous?: number | null;
+  change?: number | null;
+  /** SAME, UP, DOWN, NEW, ENDED; null without an earlier payslip. */
+  status?: string | null;
+  /** DAYS_WORKED, SALARY, OVERTIME, NEW_ITEM, ENDED_ITEM, AMOUNT_CHANGED, TAX_BRACKET, ... */
+  reason?: string | null;
+  reasonText?: string | null;
+}
+
+/** `GET /payroll/me/payslip-view` and `GET /payroll/payslip-view/{id}` (TMS-5021). */
+export interface TeamsoPayslipView {
+  payrollId?: string;
+  /** `yyyy-MM`. */
+  period?: string;
+  periodName?: string | null;
+  previousPeriod?: string | null;
+  previousPeriodName?: string | null;
+  firstPayroll?: boolean;
+  lines?: TeamsoPayslipViewLine[];
+  net?: {
+    after?: number | null;
+    before?: number | null;
+    delta?: number | null;
+    reasonsAvailable?: boolean;
+    reasons?: Array<{ code?: string; category?: string; label?: string | null; itemCode?: string | null; amount?: number | null }>;
+  };
+  summary?: string | null;
+  yearToDate?: {
+    year?: number;
+    months?: string[];
+    gross?: number | null;
+    net?: number | null;
+    incomeTax?: number | null;
+    stampTax?: number | null;
+    sgkEmployee?: number | null;
+    unemploymentEmployee?: number | null;
+    sgkTotal?: number | null;
+  } | null;
+  taxBracket?: {
+    band?: number;
+    rate?: number | null;
+    cumulativeBase?: number | null;
+    limit?: number | null;
+    remaining?: number | null;
+    nextBand?: number | null;
+    nextRate?: number | null;
+    nextPeriod?: string | null;
+    crossesNextMonth?: boolean;
+    /** crossing, safe, top or yearEnd. */
+    state?: string;
+    text?: string | null;
+  } | null;
+}
+
 /** `GET /payroll/download-file/{id}`: raw PDF bytes. */
 export interface TeamsoFileDownload {
   data: Uint8Array;
