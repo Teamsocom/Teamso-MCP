@@ -34,6 +34,14 @@ import {
 } from './leave.js';
 import { registerGetPayslipPdf, registerListMyPayslips } from './payroll.js';
 import {
+  registerAddProvisioningTaskComment,
+  registerCompleteProvisioningTask,
+  registerGetProvisioningFlow,
+  registerListMyProvisioningTasks,
+  registerListProvisioningFlows,
+  registerPreviewProvisioning,
+} from './provisioning.js';
+import {
   registerApproveGoal,
   registerApproveGoalEvaluation,
   registerCreateUserGoal,
@@ -93,6 +101,12 @@ const REGISTRARS = {
   list_cost_forecasts: registerListCostForecasts,
   get_cost_forecast_summary: registerGetCostForecastSummary,
   get_cost_forecast_breakdown: registerGetCostForecastBreakdown,
+  list_provisioning_flows: registerListProvisioningFlows,
+  get_provisioning_flow: registerGetProvisioningFlow,
+  list_my_provisioning_tasks: registerListMyProvisioningTasks,
+  complete_provisioning_task: registerCompleteProvisioningTask,
+  add_provisioning_task_comment: registerAddProvisioningTaskComment,
+  preview_provisioning: registerPreviewProvisioning,
   list_announcements: registerListAnnouncements,
   list_my_payslips: registerListMyPayslips,
   get_payslip_pdf: registerGetPayslipPdf,
@@ -141,6 +155,14 @@ export const TOOLSETS = Object.freeze({
   badges: Object.freeze(['list_badges', 'give_badge', 'list_my_badges']),
   simulation: Object.freeze(['list_simulation_assignments', 'get_simulation_results', 'list_simulations']),
   cost_forecast: Object.freeze(['list_cost_forecasts', 'get_cost_forecast_summary', 'get_cost_forecast_breakdown']),
+  provisioning: Object.freeze([
+    'list_provisioning_flows',
+    'get_provisioning_flow',
+    'list_my_provisioning_tasks',
+    'complete_provisioning_task',
+    'add_provisioning_task_comment',
+    'preview_provisioning',
+  ]),
   communication: Object.freeze(['list_announcements']),
   payroll: Object.freeze(['list_my_payslips', 'get_payslip_pdf']),
   api: Object.freeze([
@@ -248,6 +270,12 @@ export {
   registerListCostForecasts,
   registerGetCostForecastSummary,
   registerGetCostForecastBreakdown,
+  registerListProvisioningFlows,
+  registerGetProvisioningFlow,
+  registerListMyProvisioningTasks,
+  registerCompleteProvisioningTask,
+  registerAddProvisioningTaskComment,
+  registerPreviewProvisioning,
   registerListAnnouncements,
   registerListMyPayslips,
   registerGetPayslipPdf,

@@ -118,6 +118,7 @@ Ask your AI assistant:
 - *"Who is Can Öztürk's manager?"*
 - *"Show my goals for Q4 2026 and send the drafts for approval"*
 - *"Open my September payslip"*
+- *"Who starts this week and what is still missing for them?"*
 - *"Teamso'da performans hedefi nasıl girilir?"*
 
 ## Authentication
@@ -232,6 +233,24 @@ report (salary right and branch scope); a manager sees the totals of their own s
 calculated and changed in the Teamso web app
 ([/dashboard/cost-forecast](https://teamso.com/dashboard/cost-forecast)); no tool does that.
 
+### Preparation and return
+
+| Tool | Description |
+|------|-------------|
+| `list_provisioning_flows` | Flows of new employees and leavers you follow: first or last day, tasks done, late, missing items and readiness; filter by status, entry or exit, dates, name or "starting this week" |
+| `get_provisioning_flow` | One flow's items with status, due day, days late and who is on them (teams by name) |
+| `list_my_provisioning_tasks` | Your own preparation and return tasks: late, today, this week, later, and on request upcoming and done ones |
+| `complete_provisioning_task` | Close a task you are on (or manage as HR) with the value it writes, e.g. the new work e-mail address |
+| `add_provisioning_task_comment` | Add a note to a task ("laptop ordered, arrives Thursday") |
+| `preview_provisioning` | The tasks a position and first day would get, who does them and when; nothing is saved |
+
+The tools call the web app's own endpoints with your token, so they show what the
+tracking screen shows you: HR sees the flows of their branches, a manager the flows of
+their team, everyone their own tasks. Asset values, licence data, exit reasons, values
+written on closing, notes and the flow log are never returned. A manager who is not on a
+task cannot close it. When the Onboarding and offboarding module or the preparation flow is
+switched off for the company, the tools say so.
+
 ### Communication
 
 | Tool | Description |
@@ -270,6 +289,10 @@ AI Simulation chain:
 
 Budget chain:
 `list_cost_forecasts → get_cost_forecast_summary → get_cost_forecast_breakdown`
+
+Preparation chain:
+`list_provisioning_flows → get_provisioning_flow` and
+`list_my_provisioning_tasks → user confirms → complete_provisioning_task`
 
 Everything else (expenses, overtime, time tracking, payroll, recruiting,
 inventory, documents, settings...):
@@ -338,6 +361,7 @@ tools a server offers, as a comma-separated list. Default: all tools.
 | `badges` | `list_badges`, `give_badge`, `list_my_badges` |
 | `simulation` | `list_simulation_assignments`, `get_simulation_results`, `list_simulations` |
 | `cost_forecast` | `list_cost_forecasts`, `get_cost_forecast_summary`, `get_cost_forecast_breakdown` |
+| `provisioning` | `list_provisioning_flows`, `get_provisioning_flow`, `list_my_provisioning_tasks`, `complete_provisioning_task`, `add_provisioning_task_comment`, `preview_provisioning` |
 | `communication` | `list_announcements` |
 | `payroll` | `list_my_payslips`, `get_payslip_pdf` |
 | `api` | `find_api_endpoints`, `list_api_modules`, `describe_api_endpoint`, `call_api_read`, `call_api_write`, `request_sms_code` |
@@ -487,7 +511,7 @@ import { registerPrompts, PROMPT_NAMES } from '@teamso/teamso-mcp/prompts';
 | `TEAMSO_API_BASE_URL` | No | Override the API base URL (default: `https://api.teamso.com/v1`) |
 | `TEAMSO_HELP_BASE_URL` | No | Site the help articles are downloaded from (default: `https://teamso.com`) |
 | `TEAMSO_HELP_PUBLIC_URL` | No | Public site used for help links and images in tool output (default: `TEAMSO_HELP_BASE_URL`). Set it when the download address is internal |
-| `TEAMSO_TOOLSETS` | No | Comma-separated toolsets to serve: `core`, `help`, `leave`, `approvals`, `employees`, `performance`, `badges`, `simulation`, `cost_forecast`, `communication`, `payroll`, `api` (default: all) |
+| `TEAMSO_TOOLSETS` | No | Comma-separated toolsets to serve: `core`, `help`, `leave`, `approvals`, `employees`, `performance`, `badges`, `simulation`, `cost_forecast`, `provisioning`, `communication`, `payroll`, `api` (default: all) |
 
 ## Self-hosting from source
 

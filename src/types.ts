@@ -783,6 +783,181 @@ export interface TeamsoCostForecastBreakdown extends TeamsoCostForecastResultHea
   totals?: TeamsoCostForecastAmounts | null;
 }
 
+// ----------------------------------------------------------- provisioning
+
+/**
+ * Preparation and return flows (`/provisioning/...`, TMS-5285). The API answers with the caller's own rights: HR of
+ * the branch sees the flows of their branches, a manager the flows of their team, everyone their own tasks. Task
+ * outputs, notes, the flow log, asset values, licence data and exit reasons are in some answers; the tools never
+ * copy them.
+ */
+export interface TeamsoProvisioningFlowRow {
+  id: string;
+  kind?: string | null;
+  pending?: boolean | null;
+  name?: string | null;
+  position?: string | null;
+  department?: string | null;
+  date?: string | null;
+  daysLeft?: number | null;
+  total?: number | null;
+  done?: number | null;
+  late?: number | null;
+  urgent?: number | null;
+  critical?: number | null;
+  noAssignee?: number | null;
+  requestMissing?: number | null;
+  returnsOpen?: number | null;
+  returnsLate?: boolean | null;
+  missing?: string[] | null;
+  status?: string | null;
+  source?: string | null;
+  restarted?: boolean | null;
+  readiness?: string | null;
+}
+
+/** `GET /provisioning/flows`. */
+export interface TeamsoProvisioningFlowList {
+  rows?: TeamsoProvisioningFlowRow[] | null;
+  total?: number | null;
+  page?: number | null;
+  size?: number | null;
+  counts?: Record<string, number> | null;
+  cards?: Record<string, number> | null;
+  canManage?: boolean | null;
+  teamOnly?: boolean | null;
+  enabled?: boolean | null;
+  setupDone?: boolean | null;
+}
+
+export interface TeamsoProvisioningFlowListParams {
+  tab?: string;
+  kind?: string;
+  card?: string;
+  from?: string;
+  to?: string;
+  q?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface TeamsoProvisioningPerson {
+  type?: string | null;
+  userId?: string | null;
+  name?: string | null;
+}
+
+export interface TeamsoProvisioningFlowTask {
+  id: string;
+  title?: string | null;
+  source?: string | null;
+  category?: string | null;
+  status?: string | null;
+  dueDate?: string | null;
+  late?: boolean | null;
+  lateDays?: number | null;
+  urgent?: boolean | null;
+  critical?: boolean | null;
+  escalated?: boolean | null;
+  noAssigneeReason?: string | null;
+  requestMissing?: boolean | null;
+  completedAt?: string | null;
+  completedByName?: string | null;
+  people?: TeamsoProvisioningPerson[] | null;
+  mine?: boolean | null;
+}
+
+/** `GET /provisioning/flows/{id}`: the flow row plus its tasks (and HR-only parts the tools leave out). */
+export interface TeamsoProvisioningFlow extends TeamsoProvisioningFlowRow {
+  managerName?: string | null;
+  templateName?: string | null;
+  immediate?: boolean | null;
+  canManage?: boolean | null;
+  hr?: boolean | null;
+  tasks?: TeamsoProvisioningFlowTask[] | null;
+}
+
+export interface TeamsoProvisioningMyTask {
+  id: string;
+  planId?: string | null;
+  kind?: string | null;
+  source?: string | null;
+  title?: string | null;
+  itemId?: string | null;
+  employeeName?: string | null;
+  position?: string | null;
+  date?: string | null;
+  status?: string | null;
+  dueDate?: string | null;
+  openAt?: string | null;
+  urgent?: boolean | null;
+  critical?: boolean | null;
+  late?: boolean | null;
+  requestMissing?: boolean | null;
+  claimedByName?: string | null;
+  quickComplete?: boolean | null;
+  completedAt?: string | null;
+  group?: string | null;
+}
+
+/** `GET /provisioning/tasks/me`. */
+export interface TeamsoProvisioningMyTasks {
+  todo?: TeamsoProvisioningMyTask[] | null;
+  upcoming?: TeamsoProvisioningMyTask[] | null;
+  done?: TeamsoProvisioningMyTask[] | null;
+  late?: number | null;
+  enabled?: boolean | null;
+}
+
+/** What closing a task writes (`ProvisionOutputService.Values`); a new asset with a price is not offered. */
+export interface TeamsoProvisioningValues {
+  fields?: Record<string, string>;
+  inventoryIds?: string[];
+  carId?: string;
+  km?: string;
+  returnState?: string;
+  lineOutcome?: string;
+  handedTo?: string;
+  overwrite?: boolean;
+}
+
+/** `POST /provisioning/preview` body. */
+export interface TeamsoProvisioningPreviewRequest {
+  positionId?: string;
+  departmentId?: string;
+  branchId?: string;
+  managerId?: string;
+  startDate?: string;
+}
+
+export interface TeamsoProvisioningPreviewTask {
+  itemId?: string | null;
+  name?: string | null;
+  categoryName?: string | null;
+  quantity?: number | null;
+  status?: string | null;
+  openAt?: string | null;
+  dueDate?: string | null;
+  urgent?: boolean | null;
+  waitsFor?: string | null;
+  assignees?: Array<{ type?: string | null; name?: string | null; count?: number | null }> | null;
+  noAssigneeReason?: string | null;
+  requestMissing?: boolean | null;
+}
+
+/** `POST /provisioning/preview` answer (nothing is saved). */
+export interface TeamsoProvisioningPreview {
+  enabled?: boolean | null;
+  setupDone?: boolean | null;
+  refusal?: string | null;
+  tasks?: TeamsoProvisioningPreviewTask[] | null;
+  excluded?: Array<{ itemId?: string | null; name?: string | null; categoryName?: string | null; reason?: string | null }> | null;
+  urgentCount?: number | null;
+  noAssigneeCount?: number | null;
+  daysToStart?: number | null;
+  startDate?: string | null;
+}
+
 // ------------------------------------------------------------- API catalog
 
 /**

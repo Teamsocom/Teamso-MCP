@@ -638,6 +638,156 @@ export const costForecastBreakdownOutputSchema = {
   totals: z.object(costForecastAmountsShape).optional(),
 };
 
+// ----------------------------------------------------------- provisioning
+
+const provisioningKindSchema = z.enum(['ONBOARDING', 'OFFBOARDING']);
+
+export const provisioningFlowSchema = z.object({
+  id: z.string(),
+  kind: provisioningKindSchema,
+  name: z.string(),
+  pending: z.boolean(),
+  position: z.string().optional(),
+  department: z.string().optional(),
+  date: z.string().optional(),
+  daysLeft: z.number().optional(),
+  done: z.number(),
+  total: z.number(),
+  late: z.number(),
+  urgent: z.number(),
+  critical: z.number(),
+  returnsOpen: z.number(),
+  status: z.string(),
+  readiness: z.string().optional(),
+  missing: z.array(z.string()),
+  flowUrl: z.string(),
+});
+
+export const provisioningFlowsOutputSchema = {
+  flows: z.array(provisioningFlowSchema),
+  total: z.number(),
+  returned: z.number(),
+  page: z.number(),
+  status: z.string(),
+  counts: z.record(z.string(), z.number()),
+  thisWeek: z.object({
+    starting: z.number(),
+    leaving: z.number(),
+    withLateTasks: z.number(),
+    unreturnedAfterLastDay: z.number(),
+  }),
+  teamOnly: z.boolean(),
+  enabled: z.boolean(),
+  appUrl: z.string(),
+  nextAction: nextActionSchema.optional(),
+};
+
+const provisioningPersonSchema = z.object({
+  type: z.string(),
+  name: z.string(),
+});
+
+export const provisioningFlowTaskSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  source: z.string(),
+  category: z.string().optional(),
+  status: z.string(),
+  dueDate: z.string().optional(),
+  late: z.boolean(),
+  lateDays: z.number(),
+  urgent: z.boolean(),
+  critical: z.boolean(),
+  escalated: z.boolean(),
+  noAssignee: z.boolean(),
+  people: z.array(provisioningPersonSchema),
+  mine: z.boolean(),
+  completedAt: z.string().optional(),
+  completedBy: z.string().optional(),
+});
+
+export const provisioningFlowOutputSchema = {
+  flow: provisioningFlowSchema.omit({ missing: true }).extend({
+    managerName: z.string().optional(),
+    immediate: z.boolean(),
+  }),
+  tasks: z.array(provisioningFlowTaskSchema),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const provisioningMyTaskSchema = z.object({
+  id: z.string(),
+  flowId: z.string().optional(),
+  kind: provisioningKindSchema,
+  title: z.string(),
+  employeeName: z.string(),
+  position: z.string().optional(),
+  date: z.string().optional(),
+  status: z.string(),
+  dueDate: z.string().optional(),
+  opensAt: z.string().optional(),
+  group: z.string().optional(),
+  late: z.boolean(),
+  urgent: z.boolean(),
+  critical: z.boolean(),
+  needsValues: z.boolean(),
+  formMissing: z.boolean(),
+  claimedBy: z.string().optional(),
+  completedAt: z.string().optional(),
+});
+
+export const provisioningMyTasksOutputSchema = {
+  tasks: z.array(provisioningMyTaskSchema),
+  upcoming: z.array(provisioningMyTaskSchema),
+  done: z.array(provisioningMyTaskSchema),
+  late: z.number(),
+  enabled: z.boolean(),
+  appUrl: z.string(),
+  nextAction: nextActionSchema.optional(),
+};
+
+export const provisioningCompleteOutputSchema = {
+  taskId: z.string(),
+  title: z.string().optional(),
+  status: z.string(),
+  message: z.string(),
+};
+
+export const provisioningCommentOutputSchema = {
+  taskId: z.string(),
+  commented: z.boolean(),
+  message: z.string(),
+};
+
+export const provisioningPreviewOutputSchema = {
+  startDate: z.string().optional(),
+  daysToStart: z.number().optional(),
+  enabled: z.boolean(),
+  setupDone: z.boolean(),
+  wouldStart: z.boolean(),
+  refusal: z.string().optional(),
+  tasks: z.array(z.object({
+    itemId: z.string().optional(),
+    name: z.string(),
+    category: z.string().optional(),
+    quantity: z.number().optional(),
+    status: z.string(),
+    opensAt: z.string().optional(),
+    dueDate: z.string().optional(),
+    urgent: z.boolean(),
+    waitsFor: z.string().optional(),
+    people: z.array(provisioningPersonSchema),
+    noAssignee: z.boolean(),
+  })),
+  excluded: z.array(z.object({
+    name: z.string(),
+    category: z.string().optional(),
+    reason: z.string(),
+  })),
+  urgentCount: z.number(),
+  noAssigneeCount: z.number(),
+};
+
 // ---------------------------------------------------------- communication
 
 export const announcementsOutputSchema = {
