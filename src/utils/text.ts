@@ -12,11 +12,31 @@ export function normalizeSearchText(value: string | null | undefined): string {
     .toLowerCase();
 }
 
+/**
+ * "M. Ç.", "M.C." or "m c": two to four single letters are initials (TMS-5294, same rule as the API's
+ * `SearchTextUtil`), so a person is found without typing the full name, also when privacy mode stars the names
+ * ("Mi** Çe**" keeps the first letters). Returns the folded letters, or null for an ordinary query.
+ */
+export function initialsOf(query: string): string[] | null {
+  const tokens = normalizeSearchText(query).trim().split(/[\s.]+/).filter(Boolean);
+  if (tokens.length < 2 || tokens.length > 4) return null;
+  return tokens.every(token => [...token].length === 1 && /\p{L}/u.test(token)) ? tokens : null;
+}
+
 /** True when every whitespace-separated word of the query appears in one of the values. */
 export function matchesAllWords(query: string, ...values: Array<string | null | undefined>): boolean {
   const words = normalizeSearchText(query).split(/\s+/).filter(Boolean);
   if (words.length === 0) return true;
   const haystack = values.map(normalizeSearchText).filter(Boolean).join(' ');
+  const initials = initialsOf(query);
+  if (initials) {
+    // In order, as the first letters of the name's words (a middle name may be skipped)
+    let next = 0;
+    for (const word of haystack.split(/\s+/)) {
+      if (next < initials.length && word.startsWith(initials[next]!)) next++;
+    }
+    return next === initials.length;
+  }
   return words.every(word => haystack.includes(word));
 }
 
