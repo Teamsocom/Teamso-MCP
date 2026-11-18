@@ -13,9 +13,9 @@ export function normalizeSearchText(value: string | null | undefined): string {
 }
 
 /**
- * "M. Ç.", "M.C." or "m c": two to four single letters are initials (TMS-5294, same rule as the API's
+ * "A. Y.", "M.C." or "m c": two to four single letters are initials (TMS-5294, same rule as the API's
  * `SearchTextUtil`), so a person is found without typing the full name, also when privacy mode stars the names
- * ("Mi** Çe**" keeps the first letters). Returns the folded letters, or null for an ordinary query.
+ * ("Ay** Yı**" keeps the first letters). Returns the folded letters, or null for an ordinary query.
  */
 export function initialsOf(query: string): string[] | null {
   const tokens = normalizeSearchText(query).trim().split(/[\s.]+/).filter(Boolean);

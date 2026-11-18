@@ -57,9 +57,9 @@ export const DEFAULT_INSTRUCTIONS = [
     + 'list_team_goals, canApproveGoal means approve_goal (or revise_and_approve_goal to change it first) and '
     + 'canApproveEvaluation means approve_goal_evaluation.',
   'Payslips contain salary data: show them only to their owner (list_my_payslips, then get_payslip_pdf).',
-  'Privacy mode (company setting): starred values such as "Mi** Çe**" or "*********46" mean personal data is hidden '
+  'Privacy mode (company setting): starred values such as "Ay** Yı**" or "*********46" mean personal data is hidden '
     + 'from you on purpose. Never guess or ask for the real values and never write a starred value back; refer to '
-    + 'people by their ids and find them by initials (search_employees with "M. Ç."). Files are not sent in this '
+    + 'people by their ids and find them by initials (search_employees with "A. Y."). Files are not sent in this '
     + 'mode: tell the user to open them in Teamso.',
   'If search_help_articles finds nothing, browse with list_help_modules.',
   'Badges ("rozet", "takdir"): search_employees for the people, list_badges for what the user may give, confirm the '

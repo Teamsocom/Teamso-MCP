@@ -53,9 +53,9 @@ test('matchesAllWords and htmlToText', () => {
 });
 
 test('matchesAllWords: initials (TMS-5294)', () => {
-  assert.equal(matchesAllWords('M. Ç.', 'Miraç Çekmiş'), true);
-  assert.equal(matchesAllWords('M. C.', 'Mi** Çe**'), true);
-  assert.equal(matchesAllWords('m c', 'Miraç', 'Fevzi', 'Çekmiş'), true);
-  assert.equal(matchesAllWords('C. M.', 'Miraç Çekmiş'), false);
-  assert.equal(matchesAllWords('mc', 'Miraç Çekmiş'), false);
+  assert.equal(matchesAllWords('A. Y.', 'Ayşe Yılmaz'), true);
+  assert.equal(matchesAllWords('A. Y.', 'Ay** Yı**'), true);
+  assert.equal(matchesAllWords('a n y', 'Ayşe', 'Nur', 'Yılmaz'), true);
+  assert.equal(matchesAllWords('Y. A.', 'Ayşe Yılmaz'), false);
+  assert.equal(matchesAllWords('yz', 'Ayşe Yılmaz'), false);
 });
