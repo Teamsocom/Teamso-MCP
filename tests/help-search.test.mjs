@@ -51,3 +51,11 @@ test('matchesAllWords and htmlToText', () => {
   assert.equal(matchesAllWords('  ', 'anything'), true);
   assert.equal(htmlToText('<p>A&nbsp;<i>b</i></p><br/>c &lt;d&gt;'), 'A b\nc <d>');
 });
+
+test('matchesAllWords: initials (TMS-5294)', () => {
+  assert.equal(matchesAllWords('A. Y.', 'Ayşe Yılmaz'), true);
+  assert.equal(matchesAllWords('A. Y.', 'Ay** Yı**'), true);
+  assert.equal(matchesAllWords('a n y', 'Ayşe', 'Nur', 'Yılmaz'), true);
+  assert.equal(matchesAllWords('Y. A.', 'Ayşe Yılmaz'), false);
+  assert.equal(matchesAllWords('yz', 'Ayşe Yılmaz'), false);
+});

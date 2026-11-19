@@ -1,10 +1,10 @@
 # Changelog
 
-## 1.6.0 (unreleased)
+## 1.6.0 (2026-11-19)
 
 The endpoints these tools call (`/provisioning/...`) are the ones the Teamso web app's "Hazırlık ve İade Durumu" and
-"Görevlerim" screens use; they reach teamso.com with the API release that carries TMS-5285 (the manager check on
-closing a task and `enabled` on the task list). Publishing (npm and the hosted server) is a separate step.
+"Görevlerim" screens use; they are live on teamso.com since 2026-11-19 with the API release that carries TMS-5285 (the manager check on
+closing a task and `enabled` on the task list).
 
 ### Added
 
@@ -31,6 +31,19 @@ closing a task and `enabled` on the task list). Publishing (npm and the hosted s
 
 - `TOOL_NAMES` and `TOOLSETS` list the preparation tools right after the budget tools. No earlier tool was renamed
   or removed.
+
+## 1.5.1 (2026-11-19)
+
+### Added
+
+- Initials search (TMS-5294): `search_employees` and the other name filters treat two to four single letters
+  ("A. Y.", "a y", "M.C.") as the first letters of a person's name, in order, so a person can be found without typing
+  the full name. A starred name from privacy mode ("Ay** Yı**") still matches its initials.
+- Server instructions explain the company privacy mode: starred values hide personal data on purpose, the assistant
+  never guesses them or writes them back, refers to people by id and tells the user to open files in Teamso.
+
+The privacy mode itself is enforced by the Teamso API (live on teamso.com since 2026-11-19): with the mode on, every
+answer to an access token is starred before it leaves Teamso, whatever package version is used.
 
 ## 1.5.0 (2026-11-11)
 
