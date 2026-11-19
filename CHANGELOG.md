@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.1 (2026-11-19)
+
+### Added
+
+- Initials search (TMS-5294): `search_employees` and the other name filters treat two to four single letters
+  ("A. Y.", "a y", "M.C.") as the first letters of a person's name, in order, so a person can be found without typing
+  the full name. A starred name from privacy mode ("Ay** Yı**") still matches its initials.
+- Server instructions explain the company privacy mode: starred values hide personal data on purpose, the assistant
+  never guesses them or writes them back, refers to people by id and tells the user to open files in Teamso.
+
+The privacy mode itself is enforced by the Teamso API (live on teamso.com since 2026-11-19): with the mode on, every
+answer to an access token is starred before it leaves Teamso, whatever package version is used.
+
 ## 1.5.0 (2026-11-11)
 
 The API endpoints these tools call (`/cost-forecast/mcp/studies`) are live on teamso.com since 2026-11-11. The
