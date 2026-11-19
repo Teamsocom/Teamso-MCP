@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.6.0 (2026-11-19)
+
+The endpoints these tools call (`/provisioning/...`) are the ones the Teamso web app's "Hazırlık ve İade Durumu" and
+"Görevlerim" screens use; they are live on teamso.com since 2026-11-19 with the API release that carries TMS-5285 (the manager check on
+closing a task and `enabled` on the task list).
+
+### Added
+
+- Preparation and return tools (toolset `provisioning`, TMS-5285), with the token owner's own Teamso rights:
+  - `list_provisioning_flows`: flows of new employees and leavers (`GET /provisioning/flows`) with status, entry or
+    exit, date range, name and summary card (`STARTING_WEEK`, `LEAVING_WEEK`, `LATE`, `RETURNS`) filters; first or
+    last day, days left, tasks done of total, late, urgent and critical tasks, open items and readiness.
+  - `get_provisioning_flow`: one flow's tasks (`GET /provisioning/flows/{id}`) with status, due day, days late, marks,
+    escalation and the people on them.
+  - `list_my_provisioning_tasks`: the caller's own tasks (`GET /provisioning/tasks/me`), grouped late, today, this
+    week, later; upcoming and done ones on request.
+  - `complete_provisioning_task` (destructive write: clients ask for approval): closes a task with the values it
+    writes (card fields such as `WORK_EMAIL`, idle assets, a car and its kilometre, a return state, a line outcome)
+    (`POST /provisioning/tasks/{id}/complete`). A new asset with a price is not offered; unknown card fields are
+    refused before any request.
+  - `add_provisioning_task_comment`: a note on a task (`POST /provisioning/tasks/{id}/comments`).
+  - `preview_provisioning`: the tasks a position and first day would get (`POST /provisioning/preview`), nothing saved.
+- Results never carry asset values, licence data, exit reasons, task output values, notes, form answers or the flow
+  log. `MODULE_DISABLED`, a preparation flow switched off in the settings and the task refusals (`PERMISSION_DENIED`,
+  `ALREADY_DONE`, `NOT_OPEN`, `VALUE_REQUIRED`, `VALUE_TAKEN`...) are explained.
+- The server instructions name the preparation tools and add closing a preparation task to the writes to confirm.
+
+### Changed
+
+- `TOOL_NAMES` and `TOOLSETS` list the preparation tools right after the budget tools. No earlier tool was renamed
+  or removed.
+
 ## 1.5.1 (2026-11-19)
 
 ### Added

@@ -32,6 +32,13 @@ import type {
   TeamsoPayslipPage,
   TeamsoPendingTransaction,
   TeamsoPerformanceSettings,
+  TeamsoProvisioningFlow,
+  TeamsoProvisioningFlowList,
+  TeamsoProvisioningFlowListParams,
+  TeamsoProvisioningMyTasks,
+  TeamsoProvisioningPreview,
+  TeamsoProvisioningPreviewRequest,
+  TeamsoProvisioningValues,
   TeamsoPublicHolidayCalendar,
   TeamsoCostForecastBreakdown,
   TeamsoCostForecastList,
@@ -694,6 +701,57 @@ export class TeamsoClient {
       query: { by: params.by, runId: params.runId, limit: params.limit },
       signal,
     });
+  }
+
+  // ----------------------------------------------------------- provisioning
+
+  /** Preparation and return flows the caller follows (HR: their branches; a manager: their team). */
+  async listProvisioningFlows(
+    params: TeamsoProvisioningFlowListParams = {},
+    signal?: AbortSignal,
+  ): Promise<TeamsoProvisioningFlowList> {
+    return this.call<TeamsoProvisioningFlowList>('GET', '/provisioning/flows', {
+      query: { ...params },
+      signal,
+    });
+  }
+
+  /** One flow with its tasks (`GET /provisioning/flows/{id}`). The answer may carry outputs and the log: never pass them on. */
+  async getProvisioningFlow(planId: string, signal?: AbortSignal): Promise<TeamsoProvisioningFlow> {
+    return this.call<TeamsoProvisioningFlow>('GET', `/provisioning/flows/${segment(planId)}`, { signal });
+  }
+
+  /** The caller's own preparation and return tasks (`GET /provisioning/tasks/me`). */
+  async listMyProvisioningTasks(
+    params: { kind?: string; q?: string } = {},
+    signal?: AbortSignal,
+  ): Promise<TeamsoProvisioningMyTasks> {
+    return this.call<TeamsoProvisioningMyTasks>('GET', '/provisioning/tasks/me', { query: { ...params }, signal });
+  }
+
+  /** Closes a task the caller is on (or manages as HR), writing its values (`POST /provisioning/tasks/{id}/complete`). */
+  async completeProvisioningTask(
+    taskId: string,
+    request: { values?: TeamsoProvisioningValues; note?: string },
+    signal?: AbortSignal,
+  ): Promise<TeamsoEnvelope> {
+    return this.requestEnvelope('POST', `/provisioning/tasks/${segment(taskId)}/complete`, {
+      body: { values: request.values ?? null, note: request.note ?? null, early: null },
+      signal,
+    });
+  }
+
+  /** A note on a task (`POST /provisioning/tasks/{id}/comments`). */
+  async commentProvisioningTask(taskId: string, body: string, signal?: AbortSignal): Promise<TeamsoEnvelope> {
+    return this.requestEnvelope('POST', `/provisioning/tasks/${segment(taskId)}/comments`, { body: { body }, signal });
+  }
+
+  /** The tasks that would open for a position and first day; nothing is saved (`POST /provisioning/preview`). */
+  async previewProvisioning(
+    request: TeamsoProvisioningPreviewRequest,
+    signal?: AbortSignal,
+  ): Promise<TeamsoProvisioningPreview> {
+    return this.call<TeamsoProvisioningPreview>('POST', '/provisioning/preview', { body: request, signal });
   }
 
   // ---------------------------------------------------------- communication

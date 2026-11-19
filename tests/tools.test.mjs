@@ -29,6 +29,8 @@ const EXPECTED_TOOLS = [
   'list_badges', 'give_badge', 'list_my_badges',
   'list_simulation_assignments', 'get_simulation_results', 'list_simulations',
   'list_cost_forecasts', 'get_cost_forecast_summary', 'get_cost_forecast_breakdown',
+  'list_provisioning_flows', 'get_provisioning_flow', 'list_my_provisioning_tasks', 'complete_provisioning_task',
+  'add_provisioning_task_comment', 'preview_provisioning',
   'list_announcements',
   'list_my_payslips', 'get_payslip_pdf',
   'find_api_endpoints', 'list_api_modules', 'describe_api_endpoint', 'call_api_read', 'call_api_write',
