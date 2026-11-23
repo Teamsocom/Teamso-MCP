@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import net from 'node:net';
 import type {
   ApiCallRequest,
+  TeamsoLeaveInsight,
   ApiCallResponse,
   ApiQueryValue,
   HelpBundle,
@@ -21,6 +22,8 @@ import type {
   TeamsoFileDownload,
   TeamsoGoal,
   TeamsoGoalPage,
+  TeamsoGoalProgressCard,
+  TeamsoGoalProgressRequest,
   TeamsoGoalRequest,
   TeamsoLeaveControl,
   TeamsoLeaveCreateRequest,
@@ -30,6 +33,7 @@ import type {
   TeamsoLeaveTypeBalance,
   TeamsoPayslipListParams,
   TeamsoPayslipPage,
+  TeamsoPayslipView,
   TeamsoPendingTransaction,
   TeamsoPerformanceSettings,
   TeamsoProvisioningFlow,
@@ -51,6 +55,22 @@ import type {
   TeamsoUserPage,
   TeamsoUserSummary,
   TeamsoWorkingDays,
+  TeamsoAttendanceCard,
+  TeamsoAttendanceDashboard,
+  TeamsoAttendanceStatus,
+  TeamsoExpenseGroupPage,
+  TeamsoExpenseLimitCheck,
+  TeamsoExpenseReceiptRequest,
+  TeamsoExpenseType,
+  TeamsoJobCandidate,
+  TeamsoJobPosting,
+  TeamsoMyScanCorrections,
+  TeamsoMyShifts,
+  TeamsoOnboarding,
+  TeamsoScanCorrection,
+  TeamsoStandardPage,
+  TeamsoTimesheetMonth,
+  TeamsoTimesheetRounds,
 } from './types.js';
 import { VERSION } from './version.js';
 
@@ -259,6 +279,15 @@ export interface HelpCacheEntry {
   pending?: Promise<HelpBundle>;
 }
 
+/** TMS-4990: a change to an approved leave. Dates are yyyy-MM-dd; `returnDate` is the day back at work. */
+export interface LeaveChangeInput {
+  kind: 'RESCHEDULE' | 'EARLY_RETURN' | 'CANCEL';
+  startDate?: string;
+  endDate?: string;
+  returnDate?: string;
+  reason?: string;
+}
+
 export class TeamsoClient {
   readonly baseUrl: string;
   readonly helpBaseUrl: string;
@@ -409,6 +438,24 @@ export class TeamsoClient {
     return this.requestEnvelope('DELETE', `/leave/${segment(leaveId)}`, { signal });
   }
 
+  /** TMS-4499: the owner withdraws a request still waiting for a decision (no SMS code). */
+  async withdrawLeave(leaveId: string, signal?: AbortSignal): Promise<TeamsoEnvelope> {
+    return this.requestEnvelope('PUT', `/leave/cancel/${segment(leaveId)}`, { signal });
+  }
+
+  /**
+   * TMS-4990: what a change to an approved leave would do (new dates, days back to the balance, whether it goes
+   * for approval). Writes nothing.
+   */
+  async previewLeaveChange(leaveId: string, change: LeaveChangeInput, signal?: AbortSignal): Promise<TeamsoEnvelope> {
+    return this.requestEnvelope('POST', `/leave-change/${segment(leaveId)}/preview`, { body: change, signal });
+  }
+
+  /** TMS-4990: asks for the change (or applies it at once); needs a verified SMS code. */
+  async submitLeaveChange(leaveId: string, change: LeaveChangeInput, signal?: AbortSignal): Promise<TeamsoEnvelope> {
+    return this.requestEnvelope('POST', `/leave-change/${segment(leaveId)}`, { body: change, signal });
+  }
+
   /**
    * Records an approval decision. `answer` is stored as the decision note (the
    * rejection reason); the API requires one, so approvals without a note send `-`.
@@ -422,6 +469,16 @@ export class TeamsoClient {
     const note = pathSafeText(answer ?? '') || LEAVE_ANSWER_PLACEHOLDER;
     const path = `/leave/state/${segment(leaveId)}/${approve}/${segment(note)}`;
     return this.requestEnvelope('PUT', path, { signal });
+  }
+
+  /**
+   * TMS-4989: for each leave the caller may see, the balance after approval, the colleagues of the same team off
+   * (or waiting for leave) on the same dates and the planned shift days. Older servers answer 404; callers treat
+   * that as "no summary".
+   */
+  async getLeaveDecisionInsights(ids: string[], signal?: AbortSignal): Promise<TeamsoLeaveInsight[]> {
+    const result = await this.call<TeamsoLeaveInsight[]>('POST', '/leave/decision-insights', { body: { ids }, signal });
+    return Array.isArray(result) ? result : [];
   }
 
   // -------------------------------------------------------------------- otp
@@ -508,6 +565,23 @@ export class TeamsoClient {
 
   async getGoal(goalId: string, signal?: AbortSignal): Promise<TeamsoGoal> {
     return this.call<TeamsoGoal>('GET', `/user-goal/${segment(goalId)}`, { signal });
+  }
+
+  /** TMS-5065: the goal's progress card (target, latest check-in, whether the caller may add one, history). */
+  async getGoalProgress(goalId: string, signal?: AbortSignal): Promise<TeamsoGoalProgressCard> {
+    return this.call<TeamsoGoalProgressCard>('GET', `/user-goal-progress/goal/${segment(goalId)}`, { signal });
+  }
+
+  /** TMS-5065: adds a progress check-in (only while the period runs); answers the updated card. */
+  async addGoalProgress(
+    goalId: string,
+    request: TeamsoGoalProgressRequest,
+    signal?: AbortSignal,
+  ): Promise<TeamsoGoalProgressCard> {
+    return this.call<TeamsoGoalProgressCard>('POST', `/user-goal-progress/goal/${segment(goalId)}`, {
+      body: request,
+      signal,
+    });
   }
 
   async createGoal(request: TeamsoGoalRequest, signal?: AbortSignal): Promise<TeamsoGoal> {
@@ -794,6 +868,215 @@ export class TeamsoClient {
       contentType: contentType.split(';')[0]!.trim(),
       fileName: fileNameFromDisposition(response.headers.get('content-disposition')),
     };
+  }
+
+  /**
+   * The interactive payslip (TMS-5021): lines with plain explanations, the change against the previous payslip and
+   * its reasons, year to date totals and the tax band hint. With an id one e-payslip
+   * (`GET /payroll/payslip-view/{id}`), otherwise the caller's own payslip of `month` (`yyyy-MM`, latest when empty).
+   */
+  async getPayslipView(params: { payslipId?: string; month?: string } = {}, signal?: AbortSignal): Promise<TeamsoPayslipView> {
+    if (params.payslipId) {
+      return this.call<TeamsoPayslipView>('GET', `/payroll/payslip-view/${segment(params.payslipId)}`, { signal });
+    }
+    return this.call<TeamsoPayslipView>('GET', '/payroll/me/payslip-view', { query: { month: params.month }, signal });
+  }
+
+  // ------------------------------------------------------- PDKS (TMS-5154)
+
+  /** The caller's own attendance today: shift window, first check-in, check-out, break, late (`GET /pdks-qr/my-status`). */
+  async getMyAttendanceStatus(signal?: AbortSignal): Promise<TeamsoAttendanceStatus> {
+    return this.call<TeamsoAttendanceStatus>('GET', '/pdks-qr/my-status', { signal });
+  }
+
+  /** Today's counters over the employees the caller may see (`GET /pdks-qr/dashboard`, PDKS admin or manager). */
+  async getAttendanceDashboard(signal?: AbortSignal): Promise<TeamsoAttendanceDashboard> {
+    return this.call<TeamsoAttendanceDashboard>('GET', '/pdks-qr/dashboard', { signal });
+  }
+
+  /** The people behind one dashboard card (`late`, `no-show`, `came-today`, ...), today, in the caller's scope. */
+  async getAttendanceCard(card: string, signal?: AbortSignal): Promise<TeamsoAttendanceCard> {
+    return this.call<TeamsoAttendanceCard>('GET', `/pdks-qr/dashboard/detail/${segment(card)}`, { signal });
+  }
+
+  /** The caller's movements without a scan, their forgotten scan requests and the limits (`GET /pdks-qr/corrections/me`). */
+  async getMyScanCorrections(signal?: AbortSignal): Promise<TeamsoMyScanCorrections> {
+    return this.call<TeamsoMyScanCorrections>('GET', '/pdks-qr/corrections/me', { signal });
+  }
+
+  /** Sends a forgotten scan request for the caller to their manager (`POST /pdks-qr/corrections`). */
+  async submitScanCorrection(
+    request: { day: string; type: string; time: string; reason: string; note?: string },
+    signal?: AbortSignal,
+  ): Promise<TeamsoScanCorrection> {
+    return this.call<TeamsoScanCorrection>('POST', '/pdks-qr/corrections', { body: request, signal });
+  }
+
+  /** Forgotten scan requests of the people the caller manages: `PENDING` (default) or `ALL` of the last two months. */
+  async listScanCorrections(status: 'PENDING' | 'ALL' = 'PENDING', signal?: AbortSignal): Promise<TeamsoScanCorrection[]> {
+    return asArray(await this.call<TeamsoScanCorrection[]>('GET', '/pdks-qr/corrections', { query: { status }, signal }));
+  }
+
+  /** Approves or rejects a forgotten scan request; a rejection needs `note`. */
+  async decideScanCorrection(id: string, approve: boolean, note?: string, signal?: AbortSignal): Promise<TeamsoScanCorrection> {
+    return this.call<TeamsoScanCorrection>('PUT', `/pdks-qr/corrections/${segment(id)}/${approve ? 'approve' : 'reject'}`, {
+      body: { note: note ?? null },
+      signal,
+    });
+  }
+
+  // -------------------------------------------------- timesheet (TMS-5154)
+
+  /** The caller's monthly timesheet summaries as stored, newest first (`GET /timesheet-attestation/mcp/me`). */
+  async listMyTimesheets(signal?: AbortSignal): Promise<TeamsoTimesheetMonth[]> {
+    return asArray(await this.call<TeamsoTimesheetMonth[]>('GET', '/timesheet-attestation/mcp/me', { signal }));
+  }
+
+  /** A month's approval status over the caller's branches (`GET /timesheet-attestation/mcp/rounds`). */
+  async getTimesheetRounds(
+    params: { year: number; month: number; status?: string },
+    signal?: AbortSignal,
+  ): Promise<TeamsoTimesheetRounds> {
+    return this.call<TeamsoTimesheetRounds>('GET', '/timesheet-attestation/mcp/rounds', {
+      query: { year: params.year, month: params.month, status: params.status },
+      signal,
+    });
+  }
+
+  /** Approves one of the caller's waiting summaries (e-Belge approval; needs a verified SMS code first). */
+  async approveMyTimesheet(id: string, signal?: AbortSignal): Promise<TeamsoEnvelope<{ id?: string; status?: string }>> {
+    return this.requestEnvelope('POST', `/timesheet-attestation/me/${segment(id)}/approve`, { signal });
+  }
+
+  /** Marks days of one of the caller's waiting summaries as wrong, with a note for each. */
+  async disputeMyTimesheet(
+    id: string,
+    request: { days: Array<{ day: string; note: string }>; note?: string },
+    signal?: AbortSignal,
+  ): Promise<{ id?: string; status?: string; days?: number }> {
+    return this.call('POST', `/timesheet-attestation/me/${segment(id)}/dispute`, { body: request, signal });
+  }
+
+  // ------------------------------------------------------ shift (TMS-5154)
+
+  /** The caller's own shared shifts (`GET /shift/mcp/my-shifts`, at most 62 days). */
+  async listMyShifts(params: { startDate?: string; endDate?: string } = {}, signal?: AbortSignal): Promise<TeamsoMyShifts> {
+    return this.call<TeamsoMyShifts>('GET', '/shift/mcp/my-shifts', {
+      query: { startDate: params.startDate, endDate: params.endDate },
+      signal,
+    });
+  }
+
+  // ---------------------------------------------------- expense (TMS-5154)
+
+  /** Active expense types. The API answers an empty list with `GET_ERROR`, returned here as `[]`. */
+  async listExpenseTypes(signal?: AbortSignal): Promise<TeamsoExpenseType[]> {
+    try {
+      return asArray(await this.call<TeamsoExpenseType[]>('GET', '/expense-type/listAllByActive', { signal }));
+    } catch (error) {
+      if (error instanceof TeamsoApiError && error.messageCode === 'GET_ERROR' && error.status < 300) return [];
+      throw error;
+    }
+  }
+
+  /** Expense groups of one scope (`mine` or `approval`), newest first (`GET /expense-management/groups`). */
+  async listExpenseGroups(
+    params: { scope: 'mine' | 'approval'; status?: string; size?: number },
+    signal?: AbortSignal,
+  ): Promise<TeamsoExpenseGroupPage> {
+    return this.call<TeamsoExpenseGroupPage>('GET', '/expense-management/groups', {
+      query: { scope: params.scope, status: params.status, page: 0, size: params.size ?? 20 },
+      signal,
+    });
+  }
+
+  /** Receipt files the caller uploaded but has not attached to a receipt yet (the next receipt takes them all). */
+  async listPendingExpenseUploads(signal?: AbortSignal): Promise<unknown[]> {
+    return asArray(await this.call<unknown[]>('GET', '/file-upload/my-uploads/expenseForm', { signal }));
+  }
+
+  /** Creates a draft expense group owned by the caller. */
+  async createExpenseGroup(
+    request: { title: string; description: string; receiptDate?: string },
+    signal?: AbortSignal,
+  ): Promise<{ id?: string }> {
+    return this.call<{ id?: string }>('POST', '/expense-form', { body: request, signal });
+  }
+
+  /** Uploads a receipt image or PDF; the next receipt added takes it. */
+  async uploadExpenseReceiptFile(
+    file: { filename: string; contentType: string; data: Uint8Array },
+    signal?: AbortSignal,
+  ): Promise<TeamsoEnvelope> {
+    const form = new FormData();
+    form.append('file', new Blob([file.data], { type: file.contentType }), file.filename);
+    return this.requestEnvelope('POST', '/file-upload/expenseForm', { rawBody: form, signal });
+  }
+
+  /** Adds a receipt to a draft group. `INSERT_PARTIAL_SUCCESS` means the receipt was saved but its file was not. */
+  async addExpenseReceipt(request: TeamsoExpenseReceiptRequest, signal?: AbortSignal): Promise<TeamsoEnvelope<{ id?: string }>> {
+    return this.requestEnvelope('POST', '/expense-form-detail', { body: request, signal });
+  }
+
+  /** Department limit overruns of a draft group if it were sent now. */
+  async checkExpenseLimits(groupId: string, signal?: AbortSignal): Promise<TeamsoExpenseLimitCheck> {
+    return this.call<TeamsoExpenseLimitCheck>('GET', `/expense-form/${segment(groupId)}/limit-check`, { signal });
+  }
+
+  /** Sends a draft group for approval (timestamped; needs a verified SMS code first). */
+  async submitExpenseGroup(groupId: string, acknowledgeLimitOverrun: boolean, signal?: AbortSignal): Promise<TeamsoEnvelope> {
+    return this.requestEnvelope('POST', `/expense-form/${segment(groupId)}/finalize`, {
+      body: { acknowledgeLimitOverrun },
+      signal,
+    });
+  }
+
+  /** Deletes one of the caller's own draft groups (no SMS code for a draft). */
+  async deleteExpenseGroup(groupId: string, signal?: AbortSignal): Promise<TeamsoEnvelope> {
+    return this.requestEnvelope('DELETE', `/expense-form/${segment(groupId)}`, { signal });
+  }
+
+  // -------------------------------------------------------- ATS (TMS-5154)
+
+  /** Job postings with their applicant counts (ATS admin or hiring). The first item (`id` "0") is "all candidates". */
+  async listJobPostings(params: { status?: string; position?: string } = {}, signal?: AbortSignal): Promise<TeamsoJobPosting[]> {
+    return asArray(await this.call<TeamsoJobPosting[]>('GET', '/job-posting/list-with-candidate-counts', {
+      query: {
+        statusFilter: params.status ?? 'all',
+        ...(params.position ? { searchKey: 'position', searchValue: params.position } : {}),
+      },
+      signal,
+    }));
+  }
+
+  /** One posting's applicants with their stage in this posting, newest first, and the count per stage. */
+  async listJobCandidates(
+    jobPostingId: string,
+    params: { status?: string; size?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<TeamsoStandardPage<TeamsoJobCandidate>> {
+    return this.call<TeamsoStandardPage<TeamsoJobCandidate>>(
+      'GET',
+      `/job-posting/list-candidate/${segment(jobPostingId)}/pagination`,
+      { query: { page: 0, size: params.size ?? 20, status: params.status, sortBy: 'createdAt', sortDirection: 'desc' }, signal },
+    );
+  }
+
+  // ------------------------------------------------- onboarding (TMS-5154)
+
+  /** Active e-onboarding records in the caller's branches, newest first (`GET /onboarding/pagination`). */
+  async listOnboardings(params: { status?: string; size?: number } = {}, signal?: AbortSignal): Promise<TeamsoStandardPage<TeamsoOnboarding>> {
+    return this.call<TeamsoStandardPage<TeamsoOnboarding>>('GET', '/onboarding/pagination', {
+      query: {
+        page: 0,
+        size: params.size ?? 50,
+        sortKey: 'createdAt',
+        sortDirection: 'desc',
+        active: true,
+        ...(params.status ? { searchKey: 'status', searchValue: params.status } : {}),
+      },
+      signal,
+    });
   }
 
   // ------------------------------------------------------------ API catalog

@@ -4,7 +4,7 @@
 
 # Teamso MCP Server
 
-**Official [MCP](https://modelcontextprotocol.io/) server for [Teamso](https://teamso.com/)**: request leave, handle approvals, find colleagues, manage performance goals, give recognition badges, follow AI Simulation practice and results, read budget studies of Workforce Cost Forecast, read payslips, search the Teamso help center and reach every other Teamso module through permission-checked generic API tools, from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant.
+**Official [MCP](https://modelcontextprotocol.io/) server for [Teamso](https://teamso.com/)**: request leave, handle approvals, find colleagues, manage performance goals, give recognition badges, follow AI Simulation practice and results, read budget studies of Workforce Cost Forecast, read payslips, follow time tracking, timesheets and shifts, create expenses, follow job postings and e-onboarding, search the Teamso help center and reach every other Teamso module through permission-checked generic API tools, from Cursor, Claude, Windsurf, and any MCP-compatible AI assistant.
 
 [![npm](https://img.shields.io/badge/npm-@teamso/teamso--mcp-1a56db?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/package/@teamso/teamso-mcp)
 [![MCP](https://img.shields.io/badge/MCP-compatible-333?style=for-the-badge)](https://modelcontextprotocol.io/)
@@ -119,6 +119,7 @@ Ask your AI assistant:
 - *"Show my goals for Q4 2026 and send the drafts for approval"*
 - *"Open my September payslip"*
 - *"Who starts this week and what is still missing for them?"*
+- *"Why did my pay go down this month?"*
 - *"Teamso'da performans hedefi nasıl girilir?"*
 
 ## Authentication
@@ -170,7 +171,8 @@ TEAMSO_ACCESS_TOKEN=tms_pat_your-token
 | `request_leave_otp` | Send the SMS code needed to create or cancel a leave request (valid 3 minutes) |
 | `create_leave_request` | Create a leave request with the SMS code and send it for approval |
 | `list_my_leaves` | Your leave requests with status, filterable by dates and status |
-| `cancel_leave_request` | Cancel one of your leave requests with the SMS code |
+| `cancel_leave_request` | Withdraw a pending leave request, or cancel an approved leave without deleting it (reason and SMS code; kept as Cancelled) |
+| `change_leave_request` | Change the dates of an approved leave or shorten it after an early return: preview first, then send with the SMS code |
 
 ### Approvals
 
@@ -200,6 +202,7 @@ TEAMSO_ACCESS_TOKEN=tms_pat_your-token
 | `update_goal_actual_value` | Enter the achieved value of your goal during evaluation |
 | `update_manager_actual_value` | Enter your assessment of an employee's goal as their manager |
 | `approve_goal_evaluation` | Approve an employee's evaluation for a period |
+| `add_goal_progress` | Add progress to a goal during its period: value so far (or percent), on track / at risk / late, a comment (preview, then `confirm: true`) |
 
 ### Badges
 
@@ -262,7 +265,55 @@ switched off for the company, the tools say so.
 | Tool | Description |
 |------|-------------|
 | `list_my_payslips` | Your e-payslips by term with status |
+| `explain_my_payslip` | Why your pay changed: reasons against last month, every line explained, year to date totals, tax band warning |
 | `get_payslip_pdf` | One payslip as an embedded `application/pdf` resource |
+
+### PDKS (time tracking)
+
+Employees need a PDKS responsibility (employee, manager or admin); the team tools need PDKS manager (their branches)
+or admin.
+
+| Tool | Description |
+|------|-------------|
+| `get_my_attendance_today` | Your day: planned shift, check-in and check-out times, break, late or not, discrepancies waiting for an excuse |
+| `get_team_attendance_today` | Today's counts (came, at work, late, not come, not started, left early, on a break) and the people behind one of them |
+| `list_my_missed_scans` | Your movements without a scan, your forgotten scan requests and the company limits |
+| `request_missed_scan` | Ask your manager to add a forgotten check-in or check-out (preview, then `confirm: true`) |
+| `list_missed_scan_requests` | Forgotten scan requests of the people you manage, with `canDecide` |
+| `decide_missed_scan_request` | Approve, or reject with a note, a forgotten scan request (preview, then `confirm: true`) |
+
+### Timesheet and shifts
+
+| Tool | Description |
+|------|-------------|
+| `list_my_timesheets` | Your monthly timesheet summaries (puantaj mutabakatı): status, worked, missing and leave days, overtime |
+| `approve_my_timesheet` | Approve a waiting month; signed with a timestamp, so it needs the SMS code (`send_sms_code: true`, then `otp_code`) |
+| `dispute_my_timesheet` | Mark wrong days of a waiting month with a note each (preview, then `confirm: true`) |
+| `get_timesheet_approval_status` | HR (`TIMESHEET_READ_ALL` or `TIMESHEET_UPDATE`, own branches): who approved, waits or disputed a month |
+| `list_my_shifts` | Your shared shifts with hours, breaks and branch (default two weeks, at most 62 days) |
+
+### Expenses
+
+`EXPENSE_BASE` (employee) or `EXPENSE_MANAGER`.
+
+| Tool | Description |
+|------|-------------|
+| `list_expense_types` | Active expense types with id, currency and the most per receipt |
+| `list_my_expenses` | Your expense groups with status, totals and approval step; `scope: "approval"` for the groups you approve |
+| `create_expense` | Create a group with receipts (optional photo or PDF) and send it for approval: preview, `send_sms_code: true`, then `otp_code` |
+
+### Recruiting and e-onboarding
+
+| Tool | Description |
+|------|-------------|
+| `list_job_postings` | Job postings with status, applicants, location and days open (ATS admin or hiring) |
+| `list_job_candidates` | One posting's applicants with stage, CV score and AI criteria fit, no contact details (ATS admin or hiring) |
+| `list_onboarding_candidates` | E-onboarding candidates with stage and who has to act next (`ONBOARDING_READ`, `_ADD` or `_APPROVE`, own branches) |
+
+Every write above changes nothing until you agree: the ones without an SMS code return a preview until
+`confirm: true`, the SMS-protected ones (`approve_my_timesheet`, `create_expense`) preview, send the code only with
+`send_sms_code: true` and act only with `otp_code`. The API applies your own Teamso permissions to every call and
+writes each change to the activity log with `actor: mcp`.
 
 ### Generic API tools
 
@@ -354,16 +405,22 @@ tools a server offers, as a comma-separated list. Default: all tools.
 |---------|-------|
 | `core` | `get_me` |
 | `help` | `search_help_articles`, `get_help_article`, `list_help_modules` |
-| `leave` | `list_leave_types`, `get_my_leave_balance`, `calculate_leave_days`, `request_leave_otp`, `create_leave_request`, `list_my_leaves`, `cancel_leave_request` |
+| `leave` | `list_leave_types`, `get_my_leave_balance`, `calculate_leave_days`, `request_leave_otp`, `create_leave_request`, `list_my_leaves`, `cancel_leave_request`, `change_leave_request` |
 | `approvals` | `list_pending_approvals`, `approve_or_reject_leave` |
 | `employees` | `search_employees`, `get_employee_profile` |
-| `performance` | the ten goal and evaluation tools |
+| `performance` | the eleven goal, progress and evaluation tools |
 | `badges` | `list_badges`, `give_badge`, `list_my_badges` |
 | `simulation` | `list_simulation_assignments`, `get_simulation_results`, `list_simulations` |
 | `cost_forecast` | `list_cost_forecasts`, `get_cost_forecast_summary`, `get_cost_forecast_breakdown` |
 | `provisioning` | `list_provisioning_flows`, `get_provisioning_flow`, `list_my_provisioning_tasks`, `complete_provisioning_task`, `add_provisioning_task_comment`, `preview_provisioning` |
 | `communication` | `list_announcements` |
-| `payroll` | `list_my_payslips`, `get_payslip_pdf` |
+| `payroll` | `list_my_payslips`, `explain_my_payslip`, `get_payslip_pdf` |
+| `pdks` | `get_my_attendance_today`, `get_team_attendance_today`, `list_my_missed_scans`, `request_missed_scan`, `list_missed_scan_requests`, `decide_missed_scan_request` |
+| `timesheet` | `list_my_timesheets`, `approve_my_timesheet`, `dispute_my_timesheet`, `get_timesheet_approval_status` |
+| `shift` | `list_my_shifts` |
+| `expense` | `list_expense_types`, `list_my_expenses`, `create_expense` |
+| `ats` | `list_job_postings`, `list_job_candidates` |
+| `onboarding` | `list_onboarding_candidates` |
 | `api` | `find_api_endpoints`, `list_api_modules`, `describe_api_endpoint`, `call_api_read`, `call_api_write`, `request_sms_code` |
 
 An unknown toolset name stops the server with the list of valid names.
@@ -482,7 +539,7 @@ const client = new TeamsoClient(userToken, 'https://api.teamso.com/v1', {
 
 | Export | Description |
 |--------|-------------|
-| `createMcpServer(client, options?)` | Creates an McpServer with all 43 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
+| `createMcpServer(client, options?)` | Creates an McpServer with all 69 tools and both prompts registered; `options` sets `name`, `version`, `instructions` and `toolsets` |
 | `TeamsoClient` | Teamso REST client (personal access token, envelope handling, optional trusted-proxy signing) |
 | `TeamsoApiError` | Error with `status`, `messageCode`, `apiMessage` and the response `body` |
 | `registerTools(server, client, options?)` | Register the tools (optionally only some `toolsets`) on an existing McpServer |
@@ -511,7 +568,7 @@ import { registerPrompts, PROMPT_NAMES } from '@teamso/teamso-mcp/prompts';
 | `TEAMSO_API_BASE_URL` | No | Override the API base URL (default: `https://api.teamso.com/v1`) |
 | `TEAMSO_HELP_BASE_URL` | No | Site the help articles are downloaded from (default: `https://teamso.com`) |
 | `TEAMSO_HELP_PUBLIC_URL` | No | Public site used for help links and images in tool output (default: `TEAMSO_HELP_BASE_URL`). Set it when the download address is internal |
-| `TEAMSO_TOOLSETS` | No | Comma-separated toolsets to serve: `core`, `help`, `leave`, `approvals`, `employees`, `performance`, `badges`, `simulation`, `cost_forecast`, `provisioning`, `communication`, `payroll`, `api` (default: all) |
+| `TEAMSO_TOOLSETS` | No | Comma-separated toolsets to serve: `core`, `help`, `leave`, `approvals`, `employees`, `performance`, `badges`, `simulation`, `cost_forecast`, `provisioning`, `communication`, `payroll`, `pdks`, `timesheet`, `shift`, `expense`, `ats`, `onboarding`, `api` (default: all) |
 
 ## Self-hosting from source
 

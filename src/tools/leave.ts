@@ -38,6 +38,7 @@ import {
   leaveBalanceOutputSchema,
   leaveCalculationOutputSchema,
   leaveCancelledOutputSchema,
+  leaveChangeOutputSchema,
   leaveCreatedOutputSchema,
   leaveListOutputSchema,
   leaveTypesOutputSchema,
@@ -366,59 +367,217 @@ export function registerListMyLeaves(server: McpServer, client: TeamsoClient): v
   );
 }
 
+const CHANGE_REFUSALS: Record<string, string> = {
+  REASON_REQUIRED: 'Give a reason of at least 3 characters.',
+  NOT_APPROVED: 'Only an approved leave can be changed.',
+  CHANGE_PENDING: 'This leave already has a change waiting for approval.',
+  LEAVE_ENDED: 'A leave that has ended cannot be changed by the employee; HR can correct it.',
+  ALREADY_STARTED: 'A leave that has started cannot be cancelled; use change_leave_request with kind EARLY_RETURN.',
+  START_IN_PAST: 'The new start cannot be before today.',
+  OVERLAP: 'The new dates overlap another leave of the caller.',
+  BALANCE: 'The balance is not enough for the new dates.',
+  NO_CHANGE: 'The new dates are the same as the current ones.',
+  USE_CANCEL: 'Coming back on the first day is a cancellation: use cancel_leave_request.',
+  NOT_EARLIER: 'The return day must be before the end of the leave.',
+  INVALID_DATES: 'Give a valid start_date and end_date (end not before start).',
+  INVALID_RETURN_DATE: 'Give the return_date (the day back at work).',
+  LEAST_DAY_COUNT: 'This leave type has a minimum number of days.',
+  MOST_DAY_COUNT: 'This leave type has a maximum number of days.',
+  NO_WORKING_DAY: 'There is no working day in the chosen range.',
+};
+
+/** The refusal code the leave change endpoints put in `message` (HTTP 400), or null. */
+function changeRefusal(error: unknown): string | null {
+  const body = (error as { body?: { message?: unknown } } | undefined)?.body;
+  const code = typeof body?.message === 'string' ? body.message : null;
+  return code && CHANGE_REFUSALS[code] ? CHANGE_REFUSALS[code] : null;
+}
+
+async function findOwnLeave(client: TeamsoClient, leaveId: string, signal?: AbortSignal) {
+  const me = await client.getMe(signal);
+  const { leaves } = await scanLeaves(
+    client,
+    {},
+    leave => leave.id === leaveId && leaveOwnerId(leave) === me.id,
+    { limit: 1 },
+    signal,
+  );
+  return leaves[0];
+}
+
 export function registerCancelLeaveRequest(server: McpServer, client: TeamsoClient): void {
   server.registerTool(
     'cancel_leave_request',
     {
       title: 'Cancel my leave request',
-      description: 'Cancel (delete) one of the caller\'s own leave requests. This cannot be undone. '
-        + 'Requires the SMS verification code sent to the caller\'s phone and the `LEAVE_DELETE` '
-        + 'permission.',
+      description: 'Cancel one of the caller\'s own leaves. A request still waiting for a decision is withdrawn '
+        + '(no SMS code). An approved leave that has not started is cancelled without being deleted: it stays '
+        + 'as Cancelled with the reason and its days return to the balance; this needs `reason` and the SMS code '
+        + 'and goes through the leave approval process unless the company applies it at once. A leave that has '
+        + 'started cannot be cancelled here: shorten it as an early return.',
       inputSchema: {
-        leave_id: idSchema('Id of one of the caller\'s own leave requests.'),
-        otp_code: otpCodeSchema,
+        leave_id: idSchema('Id of one of the caller\'s own leaves.'),
+        reason: z.string().trim().max(1000).optional()
+          .describe('Why the approved leave is cancelled (at least 3 characters). Not needed to withdraw a pending request.'),
+        otp_code: otpCodeSchema.optional(),
       },
       outputSchema: leaveCancelledOutputSchema,
       annotations: DESTRUCTIVE_WRITE,
     },
-    async ({ leave_id, otp_code }, extra) => {
+    async ({ leave_id, reason, otp_code }, extra) => {
       try {
-        const me = await client.getMe(extra.signal);
-        const { leaves } = await scanLeaves(
-          client,
-          {},
-          leave => leave.id === leave_id && leaveOwnerId(leave) === me.id,
-          { limit: 1 },
-          extra.signal,
-        );
-        const target = leaves[0];
+        const target = await findOwnLeave(client, leave_id, extra.signal);
         if (!target) {
-          return errorResult(`Leave request \`${leave_id}\` is not one of your leave requests. `
+          return errorResult(`Leave \`${leave_id}\` is not one of your leaves. `
             + 'Find the id with `list_my_leaves`. Use `approve_or_reject_leave` for leaves you approve.');
         }
-
-        await client.verifyOtp(otp_code, extra.signal);
-        const response = await client.deleteLeave(leave_id, extra.signal);
         const leave = toLeaveSummary(target);
-        const closedPayrollPeriods = closedPayrollPeriodsOf(response.result);
-        const message = closedPayrollPeriods.length
-          ? `The leave request was cancelled. It overlapped closed payroll periods (${closedPayrollPeriods.join(', ')}); `
-            + 'tell HR so payroll can be corrected.'
-          : 'The leave request was cancelled.';
+        if (target.state === LEAVE_STATUSES.pending_approval || target.state === LEAVE_STATUSES.awaiting_document) {
+          await client.withdrawLeave(leave_id, extra.signal);
+          const message = 'The leave request was withdrawn; its days are back on the balance.';
+          return toolResult(
+            `## Leave request withdrawn\n\n- **Type:** ${leave.leaveTypeName ?? '-'}\n`
+              + `- **Dates:** ${formatDateRange(leave.start, leave.end)}\n\n${message}`,
+            { cancelled: true, outcome: 'WITHDRAWN', leave, closedPayrollPeriods: [], message },
+          );
+        }
+        if (target.state !== LEAVE_STATUSES.approved && target.state !== LEAVE_STATUSES.completed) {
+          return errorResult(`This leave is ${leave.status}; only a pending request or an approved leave can be cancelled.`);
+        }
+        if (!reason || reason.trim().length < 3) {
+          return errorResult('Cancelling an approved leave needs `reason` (at least 3 characters).');
+        }
+        if (!otp_code) {
+          return errorResult('Cancelling an approved leave needs the SMS code: call `request_leave_otp`, '
+            + 'then call cancel_leave_request again with `otp_code` and `reason`.');
+        }
+        await client.verifyOtp(otp_code, extra.signal);
+        const response = await client.submitLeaveChange(leave_id, { kind: 'CANCEL', reason }, extra.signal);
+        const result = (response.result ?? {}) as { id?: string; applied?: boolean; closedPayrollPeriods?: string[] };
+        const closedPayrollPeriods = Array.isArray(result.closedPayrollPeriods) ? result.closedPayrollPeriods : [];
+        const applied = result.applied === true;
+        const message = (applied
+          ? 'The leave is cancelled (status Cancelled, kept with the reason); its days are back on the balance.'
+          : 'The cancellation was sent for approval; the leave stays approved until it is decided.')
+          + (closedPayrollPeriods.length
+            ? ` It touches closed payroll periods (${closedPayrollPeriods.join(', ')}); tell HR so payroll can be corrected.`
+            : '');
         return toolResult(
-          `## Leave request cancelled\n\n- **Type:** ${leave.leaveTypeName ?? '-'}\n`
+          `## ${applied ? 'Leave cancelled' : 'Cancellation sent for approval'}\n\n- **Type:** ${leave.leaveTypeName ?? '-'}\n`
             + `- **Dates:** ${formatDateRange(leave.start, leave.end)}\n\n${message}`,
-          { cancelled: true, leave, closedPayrollPeriods, message },
+          {
+            cancelled: applied,
+            outcome: applied ? 'CANCELLED' : 'SENT_FOR_APPROVAL',
+            ...(result.id ? { changeId: result.id } : {}),
+            leave,
+            closedPayrollPeriods,
+            message,
+          },
         );
       } catch (error) {
+        const refusal = changeRefusal(error);
+        if (refusal) return errorResult(refusal);
         return apiErrorResult(error, {
           ...OTP_HINTS,
-          forbidden: 'Cancelling a leave request needs the `LEAVE_DELETE` permission.',
-          notFound: 'Teamso could not find that leave request.',
+          forbidden: 'Teamso did not allow cancelling this leave.',
+          notFound: 'Teamso could not find that leave.',
         });
       }
     },
   );
+}
+
+export function registerChangeLeaveRequest(server: McpServer, client: TeamsoClient): void {
+  server.registerTool(
+    'change_leave_request',
+    {
+      title: 'Change my approved leave',
+      description: 'Change the dates of one of the caller\'s approved leaves without deleting it (kind RESCHEDULE '
+        + 'with start_date and end_date), or shorten it after coming back early (kind EARLY_RETURN with '
+        + 'return_date, the day back at work). Without `otp_code` it only previews the change: new dates and '
+        + 'working days, days back to the balance, closed payroll periods and whether it goes for approval. '
+        + 'With `otp_code` (the SMS code) and `reason` it sends the change; it goes through the leave '
+        + 'approval process unless the company applies it at once.',
+      inputSchema: {
+        leave_id: idSchema('Id of one of the caller\'s approved leaves.'),
+        kind: z.enum(['RESCHEDULE', 'EARLY_RETURN']).describe('RESCHEDULE: new dates. EARLY_RETURN: came back early.'),
+        start_date: leaveDateSchema('start').optional().describe('RESCHEDULE: the new first day (yyyy-MM-dd).'),
+        end_date: leaveDateSchema('end').optional().describe('RESCHEDULE: the new last day (yyyy-MM-dd).'),
+        return_date: leaveDateSchema('start').optional().describe('EARLY_RETURN: the day back at work (yyyy-MM-dd).'),
+        reason: z.string().trim().max(1000).optional().describe('Why the leave changes (needed to send).'),
+        otp_code: otpCodeSchema.optional(),
+      },
+      outputSchema: leaveChangeOutputSchema,
+      annotations: ADDITIVE_WRITE,
+    },
+    async ({ leave_id, kind, start_date, end_date, return_date, reason, otp_code }, extra) => {
+      try {
+        const target = await findOwnLeave(client, leave_id, extra.signal);
+        if (!target) {
+          return errorResult(`Leave \`${leave_id}\` is not one of your leaves. Find the id with \`list_my_leaves\`.`);
+        }
+        const leave = toLeaveSummary(target);
+        const change = kind === 'RESCHEDULE'
+          ? { kind, startDate: start_date?.slice(0, 10), endDate: end_date?.slice(0, 10) }
+          : { kind, returnDate: return_date?.slice(0, 10) };
+        const previewEnvelope = await client.previewLeaveChange(leave_id, change, extra.signal);
+        const p = (previewEnvelope.result ?? {}) as {
+          new?: { startDate?: string; endDate?: string; returnToWorkDate?: string; days?: number };
+          daysBack?: number; closedPayrollPeriods?: string[]; applyAtOnce?: boolean;
+        };
+        const preview = compactPreview({
+          newStart: p.new?.startDate,
+          newEnd: p.new?.endDate,
+          newReturnToWork: p.new?.returnToWorkDate,
+          newWorkingDays: typeof p.new?.days === 'number' ? roundDays(p.new.days) : undefined,
+          daysBackToBalance: roundDays(Number(p.daysBack ?? 0)),
+          closedPayrollPeriods: Array.isArray(p.closedPayrollPeriods) ? p.closedPayrollPeriods : [],
+          appliesAtOnce: p.applyAtOnce === true,
+        });
+        const summary = `- **Now:** ${formatDateRange(leave.start, leave.end)} (${leave.workingDays ?? '-'} days)\n`
+          + `- **After:** ${formatDateRange(preview.newStart, preview.newEnd)} (${preview.newWorkingDays ?? '-'} days)\n`
+          + `- **Back to the balance:** ${preview.daysBackToBalance} days\n`
+          + (preview.closedPayrollPeriods.length ? `- **Closed payroll periods:** ${preview.closedPayrollPeriods.join(', ')}\n` : '');
+        if (!otp_code) {
+          const message = preview.appliesAtOnce ? 'The change would apply at once.' : 'The change would go for approval.';
+          return toolResult(`## Leave change preview\n\n${summary}\n${message} Confirm with the user, then send the SMS code.`, {
+            submitted: false, kind, leave, preview, status: 'PREVIEW', message,
+            nextAction: {
+              tool: 'request_leave_otp',
+              arguments: {},
+              reason: 'Sending the change needs an SMS code. After the user confirms, send the code, then call '
+                + 'change_leave_request with the same arguments, `reason` and the otp_code.',
+            },
+          });
+        }
+        if (!reason || reason.trim().length < 3) {
+          return errorResult('Sending the change needs `reason` (at least 3 characters).');
+        }
+        await client.verifyOtp(otp_code, extra.signal);
+        const response = await client.submitLeaveChange(leave_id, { ...change, reason }, extra.signal);
+        const result = (response.result ?? {}) as { id?: string; applied?: boolean };
+        const applied = result.applied === true;
+        const message = applied ? 'The leave is updated in place; the balance follows.'
+          : 'The change was sent for approval; the leave keeps its dates until it is decided.';
+        return toolResult(`## ${applied ? 'Leave changed' : 'Change sent for approval'}\n\n${summary}\n${message}`, {
+          submitted: true, kind, leave, preview, status: applied ? 'APPROVED' : 'PENDING',
+          ...(result.id ? { changeId: result.id } : {}), message,
+        });
+      } catch (error) {
+        const refusal = changeRefusal(error);
+        if (refusal) return errorResult(refusal);
+        return apiErrorResult(error, {
+          ...OTP_HINTS,
+          forbidden: 'Teamso did not allow changing this leave.',
+          notFound: 'Teamso could not find that leave.',
+        });
+      }
+    },
+  );
+}
+
+function compactPreview<T extends Record<string, unknown>>(value: T): T {
+  return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as T;
 }
 
 function draftOf(prepared: PreparedLeaveRequest) {

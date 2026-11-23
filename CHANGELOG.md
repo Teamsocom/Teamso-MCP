@@ -1,5 +1,71 @@
 # Changelog
 
+## 1.7.0 (2026-11-23)
+
+Some endpoints these tools call are new: `GET /payroll/me/payslip-view` and `GET /payroll/payslip-view/{id}`
+(TMS-5021), `GET` and `POST /user-goal-progress/goal/{goalId}` (TMS-5065), `GET /shift/mcp/my-shifts`,
+`GET /timesheet-attestation/mcp/me` and `/mcp/rounds` (TMS-5154), the forgotten scan endpoints (TMS-5003), the monthly
+timesheet approval (TMS-5007), the leave change endpoints (TMS-4990) and `POST /leave/decision-insights` (TMS-4989).
+They ship with the Teamso API release of 2026-11-23; against an older API these tools answer with the API's error.
+
+### Added
+
+- `explain_my_payslip` (toolset `payroll`, TMS-5021), read only: "why did my pay go down" ("maaşım neden düştü")
+  from the caller's own closed payslip, the latest one or `month` (`yyyy-MM`) or `payslip_id`
+  (`GET /payroll/me/payslip-view`, `GET /payroll/payslip-view/{id}`). It returns the net pay against the previous
+  payslip with its reasons by category (days worked, overtime, a new or ended item, tax band, minimum wage
+  exemption, social security ceiling), the changed lines with last month's amount and reason, every line with a
+  plain explanation, year to date totals of closed periods and the tax band warning. No AI credit is used. Payslips
+  uploaded as PDF and open periods answer `PAYSLIP_VIEW_NOT_AVAILABLE`, someone else's payslip `PERMISSION_DENIED`.
+- PDKS, timesheet, shift, expense, ATS and e-onboarding tools (TMS-5154), with the token owner's own Teamso rights.
+  Seventeen tools in six new toolsets:
+  - `pdks`: `get_my_attendance_today` (the caller's day: `GET /pdks-qr/my-status`), `get_team_attendance_today`
+    (counts and the late, absent, at work... people of the caller's scope: `GET /pdks-qr/dashboard` and
+    `/dashboard/detail/{card}`, PDKS manager or admin), `list_my_missed_scans` (`GET /pdks-qr/corrections/me`),
+    `request_missed_scan` (`POST /pdks-qr/corrections`), `list_missed_scan_requests` (`GET /pdks-qr/corrections`)
+    and `decide_missed_scan_request` (`PUT /pdks-qr/corrections/{id}/approve|reject`).
+  - `timesheet`: `list_my_timesheets` (`GET /timesheet-attestation/mcp/me`), `approve_my_timesheet` (SMS code, then
+    `POST /timesheet-attestation/me/{id}/approve`; a month that changed answers with the new version's id),
+    `dispute_my_timesheet` (`POST /timesheet-attestation/me/{id}/dispute`) and `get_timesheet_approval_status`
+    (`GET /timesheet-attestation/mcp/rounds`, TIMESHEET_READ_ALL or TIMESHEET_UPDATE in the caller's branches).
+  - `shift`: `list_my_shifts` (the caller's shared shifts, `GET /shift/mcp/my-shifts`).
+  - `expense`: `list_expense_types`, `list_my_expenses` (`GET /expense-management/groups`, scope `mine` or
+    `approval`) and `create_expense` (draft group, receipts with an optional photo or PDF, department limit check,
+    SMS code, then `POST /expense-form/{id}/finalize`; a group that cannot be sent is deleted again).
+  - `ats`: `list_job_postings` and `list_job_candidates` (stage, CV score and AI criteria fit, no contact details).
+  - `onboarding`: `list_onboarding_candidates` (stage and who has to act next).
+- No write runs without the user's agreement: `request_missed_scan`, `decide_missed_scan_request` and
+  `dispute_my_timesheet` only preview until `confirm: true`; `approve_my_timesheet` and `create_expense` preview, send
+  the SMS code only with `send_sms_code: true` and act only with `otp_code`, so each toolset works on its own. The
+  read tools only read (the timesheet reads use the new as-stored endpoints, so a read only connection can call them).
+- `change_leave_request` (toolset `leave`, TMS-4990): change the dates of an approved leave (`RESCHEDULE`) or shorten
+  it after an early return (`EARLY_RETURN`, `return_date` = the day back at work). Without `otp_code` it previews the
+  change (`POST /leave-change/{id}/preview`: new dates and working days, days back to the balance, closed payroll
+  periods, whether it applies at once); with `otp_code` and `reason` it sends it.
+- `add_goal_progress` (toolset `performance`, TMS-5065): add progress to a goal during its period ("hedefime
+  ilerleme ekle"): the value reached so far (numeric goals, `value`) or the percent done (`OTHER` goals, `percent`),
+  `ON_TRACK`, `AT_RISK` or `LATE` and an optional comment. It reads the goal's progress card first
+  (`GET /user-goal-progress/goal/{id}`) and answers in plain words when the period is not running, the goal is not
+  approved or already evaluated, or the caller is not its owner, direct manager or a performance admin. Without
+  `confirm: true` it only previews (with the percent of the target and the last check-ins); with it the check-in is
+  saved (`POST /user-goal-progress/goal/{id}`) and kept in the goal's history. Files are attached in the web app.
+- `list_pending_approvals` (TMS-4989) adds a one-line team summary to each pending leave
+  (`POST /leave/decision-insights`): colleagues off or waiting on the same dates, a balance that goes below zero and
+  planned shift days. A server without the endpoint keeps the earlier output.
+- The server instructions name the new tools and their Turkish words ("giriş çıkış", "puantaj", "vardiya",
+  "masraf", "ilan", "aday", "e-karşılama").
+
+### Changed
+
+- `TOOL_NAMES` and `TOOLSETS` list the new tools after the payroll tools (`add_goal_progress` after
+  `approve_goal_evaluation`, `change_leave_request` after `cancel_leave_request`), so the generic API tools stay last.
+  69 tools in 19 toolsets; no earlier tool was renamed or removed.
+- `cancel_leave_request` no longer deletes a leave (TMS-4990). A request still waiting for a decision is withdrawn
+  (`PUT /leave/cancel/{id}`, no SMS code). An approved leave that has not started is cancelled without being deleted
+  (`POST /leave-change/{id}` with `kind: CANCEL`, `reason` and the SMS code): it goes through the leave approval
+  process unless the company applies it at once, and stays as Cancelled (status 7) with the reason. New output
+  fields `outcome` (`WITHDRAWN`, `CANCELLED`, `SENT_FOR_APPROVAL`) and `changeId`.
+
 ## 1.6.0 (2026-11-19)
 
 The endpoints these tools call (`/provisioning/...`) are the ones the Teamso web app's "Hazırlık ve İade Durumu" and

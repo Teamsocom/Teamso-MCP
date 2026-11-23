@@ -20,19 +20,26 @@ const EXPECTED_TOOLS = [
   'search_help_articles', 'get_help_article', 'list_help_modules',
   'get_me',
   'list_leave_types', 'get_my_leave_balance', 'calculate_leave_days', 'request_leave_otp',
-  'create_leave_request', 'list_my_leaves', 'cancel_leave_request',
+  'create_leave_request', 'list_my_leaves', 'cancel_leave_request', 'change_leave_request',
   'list_pending_approvals', 'approve_or_reject_leave',
   'search_employees', 'get_employee_profile',
   'list_performance_periods', 'list_my_goals', 'list_team_goals', 'create_user_goal',
   'send_goals_to_approval', 'approve_goal', 'revise_and_approve_goal', 'update_goal_actual_value',
-  'update_manager_actual_value', 'approve_goal_evaluation',
+  'update_manager_actual_value', 'approve_goal_evaluation', 'add_goal_progress',
   'list_badges', 'give_badge', 'list_my_badges',
   'list_simulation_assignments', 'get_simulation_results', 'list_simulations',
   'list_cost_forecasts', 'get_cost_forecast_summary', 'get_cost_forecast_breakdown',
   'list_provisioning_flows', 'get_provisioning_flow', 'list_my_provisioning_tasks', 'complete_provisioning_task',
   'add_provisioning_task_comment', 'preview_provisioning',
   'list_announcements',
-  'list_my_payslips', 'get_payslip_pdf',
+  'list_my_payslips', 'explain_my_payslip', 'get_payslip_pdf',
+  'get_my_attendance_today', 'get_team_attendance_today', 'list_my_missed_scans', 'request_missed_scan',
+  'list_missed_scan_requests', 'decide_missed_scan_request',
+  'list_my_timesheets', 'approve_my_timesheet', 'dispute_my_timesheet', 'get_timesheet_approval_status',
+  'list_my_shifts',
+  'list_expense_types', 'list_my_expenses', 'create_expense',
+  'list_job_postings', 'list_job_candidates',
+  'list_onboarding_candidates',
   'find_api_endpoints', 'list_api_modules', 'describe_api_endpoint', 'call_api_read', 'call_api_write',
   'request_sms_code',
 ];
@@ -403,19 +410,73 @@ test('list_my_leaves keeps only the caller\'s leaves and filters by status', asy
   });
 });
 
-test('cancel_leave_request deletes only the caller\'s leave after the OTP check', async () => {
-  await withMcp([], async ({ call, calls }) => {
-    const result = await call('cancel_leave_request', { leave_id: 'l-1', otp_code: VALID_OTP });
+test('cancel_leave_request withdraws the caller\'s pending request without an SMS code and never deletes', async () => {
+  await withMcp([['PUT /leave/cancel/l-1', () => envelope(undefined, 'DELETE_SUCCESS')]], async ({ call, calls }) => {
+    const result = await call('cancel_leave_request', { leave_id: 'l-1' });
     assert.notEqual(result.isError, true, textOf(result));
-    const order = calls.map(request => `${request.method} ${request.path}`);
-    assert.ok(order.indexOf(`GET /sms/checkToken/${VALID_OTP}`) < order.indexOf('DELETE /leave/l-1'));
+    assert.equal(result.structuredContent.outcome, 'WITHDRAWN');
     assert.equal(result.structuredContent.leave.id, MY_LEAVE.id);
-    assert.deepEqual(result.structuredContent.closedPayrollPeriods, []);
+    assert.equal(callsTo(calls, 'PUT', '/leave/cancel/l-1').length, 1);
+    assert.equal(callsTo(calls, 'GET', `/sms/checkToken/${VALID_OTP}`).length, 0);
+    assert.equal(calls.filter(request => request.method === 'DELETE').length, 0);
 
-    const notMine = await call('cancel_leave_request', { leave_id: 'l-2', otp_code: VALID_OTP });
+    const notMine = await call('cancel_leave_request', { leave_id: 'l-2' });
     assert.equal(notMine.isError, true);
-    assert.match(textOf(notMine), /not one of your leave requests/);
-    assert.equal(callsTo(calls, 'DELETE', '/leave/l-2').length, 0);
+    assert.match(textOf(notMine), /not one of your leaves/);
+  });
+});
+
+// TMS-4990: an approved leave is cancelled or changed without being deleted
+const APPROVED_LEAVE = { ...MY_LEAVE, id: 'l-9', state: 2, startDate: '2026-12-07 09:00', endDate: '2026-12-11 18:00', totalLeaveDay: 5 };
+const approvedList = ['GET /leave/listAllLeavesAdvancedPagination', () => envelope({
+  items: [APPROVED_LEAVE],
+  pagination: { currentPage: 0, pageSize: 100, totalRecords: 1, totalPages: 1, hasNext: false },
+})];
+
+test('cancel_leave_request turns an approved leave into a cancellation request after the SMS code', async () => {
+  await withMcp([approvedList, ['POST /leave-change/l-9', call => envelope({ id: 'c-1', status: 'PENDING', applied: false, closedPayrollPeriods: [] }, 'INSERT_SUCCESS')]], async ({ call, calls }) => {
+    const noReason = await call('cancel_leave_request', { leave_id: 'l-9', otp_code: VALID_OTP });
+    assert.equal(noReason.isError, true);
+    assert.match(textOf(noReason), /reason/);
+    const noCode = await call('cancel_leave_request', { leave_id: 'l-9', reason: 'Plan değişti' });
+    assert.equal(noCode.isError, true);
+    assert.match(textOf(noCode), /request_leave_otp/);
+    const result = await call('cancel_leave_request', { leave_id: 'l-9', reason: 'Plan değişti', otp_code: VALID_OTP });
+    assert.notEqual(result.isError, true, textOf(result));
+    assert.equal(result.structuredContent.outcome, 'SENT_FOR_APPROVAL');
+    assert.equal(result.structuredContent.changeId, 'c-1');
+    assert.equal(result.structuredContent.cancelled, false);
+    const order = calls.map(request => `${request.method} ${request.path}`);
+    assert.ok(order.indexOf(`GET /sms/checkToken/${VALID_OTP}`) < order.indexOf('POST /leave-change/l-9'));
+    assert.deepEqual(callsTo(calls, 'POST', '/leave-change/l-9')[0].body, { kind: 'CANCEL', reason: 'Plan değişti' });
+    assert.equal(calls.filter(request => request.method === 'DELETE').length, 0);
+  });
+});
+
+test('change_leave_request previews without a code and sends the change with it', async () => {
+  const preview = ['POST /leave-change/l-9/preview', () => envelope({
+    kind: 'EARLY_RETURN', old: { days: 5 }, new: { startDate: '2026-12-07 09:00', endDate: '2026-12-08 18:00', returnToWorkDate: '2026-12-09 09:00', days: 2 },
+    daysBack: 3, closedPayrollPeriods: [], applyAtOnce: true,
+  })];
+  const submit = ['POST /leave-change/l-9', () => envelope({ id: 'c-2', status: 'APPROVED', applied: true }, 'INSERT_SUCCESS')];
+  await withMcp([approvedList, preview, submit], async ({ call, calls }) => {
+    const dry = await call('change_leave_request', { leave_id: 'l-9', kind: 'EARLY_RETURN', return_date: '2026-12-09' });
+    assert.notEqual(dry.isError, true, textOf(dry));
+    assert.equal(dry.structuredContent.status, 'PREVIEW');
+    assert.equal(dry.structuredContent.preview.daysBackToBalance, 3);
+    assert.equal(dry.structuredContent.nextAction.tool, 'request_leave_otp');
+    assert.equal(calls.filter(request => request.method === 'POST' && request.path === '/leave-change/l-9').length, 0, 'no change without the code');
+    const sent = await call('change_leave_request', { leave_id: 'l-9', kind: 'EARLY_RETURN', return_date: '2026-12-09', reason: 'Erken döndüm', otp_code: VALID_OTP });
+    assert.notEqual(sent.isError, true, textOf(sent));
+    assert.equal(sent.structuredContent.status, 'APPROVED');
+    const sentCall = calls.find(request => request.method === 'POST' && request.path === '/leave-change/l-9');
+    assert.deepEqual(sentCall.body, { kind: 'EARLY_RETURN', returnDate: '2026-12-09', reason: 'Erken döndüm' });
+  });
+  const refused = ['POST /leave-change/l-9/preview', () => json({ code: 0, message: 'OVERLAP', message_code: 'INVALID_INPUT_PARAMETERS' }, 400)];
+  await withMcp([approvedList, refused], async ({ call }) => {
+    const result = await call('change_leave_request', { leave_id: 'l-9', kind: 'RESCHEDULE', start_date: '2026-12-14', end_date: '2026-12-15' });
+    assert.equal(result.isError, true);
+    assert.match(textOf(result), /overlap another leave/);
   });
 });
 
@@ -434,6 +495,30 @@ test('list_pending_approvals returns only leaves the caller can decide', async (
     const result = await call('list_pending_approvals');
     assert.equal(result.isError, true);
     assert.match(textOf(result), /server error/);
+  });
+});
+
+test('list_pending_approvals adds the team summary when the server has it (TMS-4989)', async () => {
+  const insights = [['POST /leave/decision-insights', () => envelope([{
+    id: 'l-2', balanceAfter: -1, teamSize: 4, shiftDays: ['2026-12-08'], clean: false,
+    overlaps: [{ userId: 'u-9', name: 'Ayşe Yılmaz', startDate: '2026-12-08T09:00:00Z', endDate: '2026-12-09T18:00:00Z', pending: true }],
+  }], 'GET_SUCCESS')]];
+  await withMcp(insights, async ({ call, calls }) => {
+    const result = await call('list_pending_approvals');
+    const team = result.structuredContent.approvals[0].team;
+    assert.equal(team.clean, false);
+    assert.equal(team.balanceAfter, -1);
+    assert.deepEqual(team.shiftDays, ['2026-12-08']);
+    assert.deepEqual(team.overlaps, [{ name: 'Ayşe Yılmaz', start: '2026-12-08', end: '2026-12-09', pending: true }]);
+    assert.match(team.summary, /Heads up: 1 more in the team .*Ayşe Yılmaz.*balance after approval -1 days.*planned shift on 2026-12-08/);
+    assert.match(textOf(result), /\| Team \|/);
+    const [post] = callsTo(calls, 'POST', '/leave/decision-insights');
+    assert.deepEqual(post.body, { ids: ["l-2"] });
+  });
+  await withMcp([['POST /leave/decision-insights', () => new Response('', { status: 404 })]], async ({ call }) => {
+    const result = await call('list_pending_approvals');
+    assert.notEqual(result.isError, true, 'an older server without the endpoint still lists the requests');
+    assert.equal(result.structuredContent.approvals[0].team, undefined);
   });
 });
 

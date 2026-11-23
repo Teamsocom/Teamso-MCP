@@ -249,7 +249,7 @@ test('toolsets cover every tool exactly once', () => {
   const grouped = TOOLSET_NAMES.flatMap(name => TOOLSETS[name]);
   assert.deepEqual([...grouped].sort(), [...TOOL_NAMES].sort());
   assert.equal(new Set(grouped).size, grouped.length);
-  assert.deepEqual(TOOLSET_NAMES, ['core', 'help', 'leave', 'approvals', 'employees', 'performance', 'badges', 'simulation', 'cost_forecast', 'provisioning', 'communication', 'payroll', 'api']);
+  assert.deepEqual(TOOLSET_NAMES, ['core', 'help', 'leave', 'approvals', 'employees', 'performance', 'badges', 'simulation', 'cost_forecast', 'provisioning', 'communication', 'payroll', 'pdks', 'timesheet', 'shift', 'expense', 'ats', 'onboarding', 'api']);
   assert.ok(Object.isFrozen(TOOLSETS));
 });
 
@@ -257,7 +257,7 @@ test('resolveToolsets accepts lists, strings and all, and rejects unknown names'
   assert.deepEqual(resolveToolsets(), [...TOOL_NAMES]);
   assert.deepEqual(resolveToolsets(''), [...TOOL_NAMES]);
   assert.deepEqual(resolveToolsets('all'), [...TOOL_NAMES]);
-  assert.deepEqual(resolveToolsets(' Payroll , core'), ['get_me', 'list_my_payslips', 'get_payslip_pdf']);
+  assert.deepEqual(resolveToolsets(' Payroll , core'), ['get_me', 'list_my_payslips', 'explain_my_payslip', 'get_payslip_pdf']);
   assert.deepEqual(resolveToolsets(['communication']), ['list_announcements']);
   assert.throws(() => resolveToolsets('leave,nope'), /Unknown Teamso toolset\(s\): nope\. Valid toolsets: core, help/);
 });
@@ -269,7 +269,7 @@ test('createMcpServer serves only the selected toolsets', async () => {
   await withApi([], async ({ tools }) => {
     assert.deepEqual(tools.map(tool => tool.name), ['list_leave_types', 'get_my_leave_balance', 'calculate_leave_days',
       'request_leave_otp', 'create_leave_request', 'list_my_leaves', 'cancel_leave_request',
-      'list_pending_approvals', 'approve_or_reject_leave']);
+      'change_leave_request', 'list_pending_approvals', 'approve_or_reject_leave']);
   }, { toolsets: 'leave,approvals' });
   assert.throws(() => createMcpServer(createTestClient(createMockApi().fetch), { toolsets: 'bogus' }), /Unknown Teamso toolset/);
 });

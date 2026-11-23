@@ -4,6 +4,9 @@ import { TeamsoApiError, type TeamsoClient } from '../client.js';
 import type {
   TeamsoGoal,
   TeamsoGoalPage,
+  TeamsoGoalProgressCard,
+  TeamsoGoalProgressEntry,
+  TeamsoGoalProgressRequest,
   TeamsoGoalRequest,
   TeamsoGoalScore,
   TeamsoPerformancePeriod,
@@ -29,6 +32,7 @@ import {
   evaluationApprovalOutputSchema,
   goalListOutputSchema,
   goalOutputSchema,
+  goalProgressOutputSchema,
   goalsSentOutputSchema,
   performancePeriodsOutputSchema,
 } from './schemas.js';
@@ -41,6 +45,8 @@ import {
   idSchema,
   periodSchema,
 } from './shared.js';
+
+import { confirmSchema, refusalText } from './workforce-support.js';
 
 const GOAL_PAGE_SIZE = 100;
 const MAX_GOAL_PAGES = 5;
@@ -386,6 +392,159 @@ export function registerReviseAndApproveGoal(server: McpServer, client: TeamsoCl
         const response = await client.reviseAndApproveGoal(goal_id, request, extra.signal);
         return goalMutationResult(response.result, goal_id, 'Goal revised and approved', client, extra.signal);
       } catch (error) {
+        return apiErrorResult(error, GOAL_HINTS);
+      }
+    },
+  );
+}
+
+const PROGRESS_STATUSES = ['ON_TRACK', 'AT_RISK', 'LATE'] as const;
+
+/** TMS-5065: refusals of `POST /user-goal-progress/goal/{id}` in plain words. */
+const PROGRESS_REFUSALS: Record<string, string> = {
+  PERIOD_NOT_ACTIVE: 'The goal\'s period is not running, so progress cannot be added now. Progress is added only '
+    + 'between the period\'s start and end day.',
+  GOAL_NOT_OPEN: 'This goal takes no progress now: progress is added after the goal is approved and until its actual '
+    + 'value is entered.',
+  PERMISSION_DENIED: 'Only the goal\'s owner, their direct manager or a performance admin can add progress to it.',
+  PROGRESS_STATUS_REQUIRED: 'Choose a status: ON_TRACK, AT_RISK or LATE.',
+  PROGRESS_VALUE_REQUIRED: 'This is a numeric goal: send the value reached so far as `value`.',
+  PROGRESS_PERCENT_INVALID: 'This is an `OTHER` goal: send `percent` between 0 and 100.',
+  PROGRESS_COMMENT_TOO_LONG: 'The comment can have at most 1000 characters.',
+};
+
+/** Same rule as Teamso (value / target, a negative target the other way round), one decimal. */
+function percentOfTarget(value: number, target: number | null | undefined): number | undefined {
+  if (target === null || target === undefined || target === 0) return undefined;
+  if (target > 0) return Math.round((value / target) * 1000) / 10;
+  if (value === 0) return 0;
+  return Math.round((target / value) * 1000) / 10;
+}
+
+function num(value: number | null | undefined): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function progressHistory(entries: TeamsoGoalProgressEntry[] | undefined, limit = 5) {
+  return (entries ?? []).slice(0, limit).map(entry => ({
+    ...(num(entry.value) !== undefined ? { value: num(entry.value) } : {}),
+    ...(num(entry.percent) !== undefined ? { percent: num(entry.percent) } : {}),
+    ...(entry.status ? { status: entry.status } : {}),
+    ...(entry.comment ? { comment: entry.comment } : {}),
+    ...(entry.createdAt ? { createdAt: entry.createdAt } : {}),
+    ...(entry.createdByName ? { createdBy: entry.createdByName } : {}),
+  }));
+}
+
+function progressLine(progress: { value?: number; percent?: number; status: string; comment?: string }): string {
+  const parts = [
+    progress.value !== undefined ? `value ${progress.value}` : undefined,
+    progress.percent !== undefined ? `${progress.percent}% of the target` : undefined,
+    progress.status,
+    progress.comment ? `"${progress.comment}"` : undefined,
+  ].filter(Boolean);
+  return parts.join(', ');
+}
+
+export function registerAddGoalProgress(server: McpServer, client: TeamsoClient): void {
+  server.registerTool(
+    'add_goal_progress',
+    {
+      title: 'Add progress to my goal',
+      description: 'Record where a goal stands during its period ("hedefime ilerleme ekle"): the value reached so far '
+        + '(numeric goals: `value`) or the percent done (`OTHER` goals: `percent`), whether it is ON_TRACK, AT_RISK '
+        + 'or LATE, and an optional short comment. Without `confirm: true` it only previews; with it the check-in is '
+        + 'saved and kept in the goal\'s history (check-ins are never edited). Only while the period runs and the '
+        + 'goal is approved but not yet evaluated, by the goal\'s owner, their direct manager or a performance admin. '
+        + 'AT_RISK and LATE goals reach the manager\'s team view. Files are attached in the Teamso web app.',
+      inputSchema: {
+        goal_id: idSchema('Id of a goal of the caller, or of an employee the caller manages.'),
+        status: z.enum(PROGRESS_STATUSES).describe('ON_TRACK, AT_RISK or LATE.'),
+        value: z.number().finite().optional().describe('Value reached so far, for numeric goals (e.g. 18 of 40).'),
+        percent: z.number().min(0).max(100).optional().describe('Percent done (0-100), only for `OTHER` goals.'),
+        comment: z.string().trim().max(1000).optional().describe('Short comment: what was done, what is needed.'),
+        confirm: confirmSchema,
+      },
+      outputSchema: goalProgressOutputSchema,
+      annotations: ADDITIVE_WRITE,
+    },
+    async ({ goal_id, status, value, percent, comment, confirm }, extra) => {
+      try {
+        const card: TeamsoGoalProgressCard = await client.getGoalProgress(goal_id, extra.signal);
+        if (card?.canAddProgress !== true) {
+          const reason = card?.closedReason && PROGRESS_REFUSALS[card.closedReason]
+            ? PROGRESS_REFUSALS[card.closedReason]!
+            : card?.open ? PROGRESS_REFUSALS.PERMISSION_DENIED! : PROGRESS_REFUSALS.GOAL_NOT_OPEN!;
+          return errorResult(reason);
+        }
+        const isOther = card.isOther === true;
+        if (isOther && (percent === undefined || value !== undefined)) {
+          throw new ToolInputError('This is an `OTHER` goal: send `percent` (0-100) and no `value`.');
+        }
+        if (!isOther && (value === undefined || percent !== undefined)) {
+          throw new ToolInputError('This is a numeric goal: send the value reached so far as `value`, not `percent`.');
+        }
+        const note = comment ? comment : undefined;
+        const request: TeamsoGoalProgressRequest = {
+          ...(isOther ? { percent } : { value }),
+          status,
+          ...(note ? { comment: note } : {}),
+          withFile: false,
+        };
+        const target = num(card.targetValue);
+        const progress = {
+          ...(value !== undefined ? { value } : {}),
+          ...(isOther
+            ? { percent }
+            : percentOfTarget(value!, target) !== undefined ? { percent: percentOfTarget(value!, target) } : {}),
+          status,
+          ...(note ? { comment: note } : {}),
+        };
+        const base = {
+          goalId: card.goalId || goal_id,
+          ...(card.goalName ? { goalName: card.goalName } : {}),
+          ...(card.periodName ? { period: card.periodName } : {}),
+          ...(target !== undefined ? { target } : {}),
+        };
+        if (!confirm) {
+          const last = card.lastProgressStatus
+            ? ` The last check-in was ${card.lastProgressStatus}${num(card.lastProgressPercent) !== undefined ? ` at ${card.lastProgressPercent}%` : ''}.`
+            : ' This would be the first check-in.';
+          const message = `This check-in would be added to "${card.goalName ?? goal_id}": ${progressLine(progress)}.${last} `
+            + 'Nothing was saved yet.';
+          return toolResult(`## Goal progress preview\n\n${message}`, {
+            saved: false,
+            ...base,
+            progress,
+            history: progressHistory(card.entries, 3),
+            message,
+            nextAction: {
+              tool: 'add_goal_progress',
+              arguments: { goal_id, status, ...(isOther ? { percent } : { value }), ...(note ? { comment: note } : {}), confirm: true },
+              reason: 'Save it only after the user agrees to these details.',
+            },
+          });
+        }
+        const saved = await client.addGoalProgress(goal_id, request, extra.signal);
+        const latest = saved?.entries?.[0];
+        const savedProgress = {
+          ...(num(latest?.value) !== undefined ? { value: num(latest?.value) } : progress.value !== undefined ? { value: progress.value } : {}),
+          ...(num(latest?.percent) !== undefined ? { percent: num(latest?.percent) } : progress.percent !== undefined ? { percent: progress.percent } : {}),
+          status,
+          ...(note ? { comment: note } : {}),
+        };
+        const message = `Progress saved for "${saved?.goalName ?? card.goalName ?? goal_id}": ${progressLine(savedProgress)}.`
+          + (status === 'ON_TRACK' ? '' : ' The goal now shows in the manager\'s list of goals at risk.');
+        return toolResult(`## Goal progress saved\n\n${message}`, {
+          saved: true,
+          ...base,
+          progress: savedProgress,
+          history: progressHistory(saved?.entries),
+          message,
+        });
+      } catch (error) {
+        const refusal = refusalText(error, PROGRESS_REFUSALS);
+        if (refusal) return errorResult(refusal);
         return apiErrorResult(error, GOAL_HINTS);
       }
     },

@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { pathSafeText, type TeamsoClient } from '../client.js';
-import type { TeamsoLeave } from '../types.js';
+import type { TeamsoLeave, TeamsoLeaveInsight } from '../types.js';
 import { formatDateRange, markdownTable } from '../utils/format.js';
 import { apiErrorResult, errorResult, toolResult } from '../utils/results.js';
 import {
@@ -9,6 +9,7 @@ import {
   closedPayrollPeriodsOf,
   leaveStatusName,
   toPendingApproval,
+  type PendingApproval,
 } from '../utils/structured.js';
 import { scanLeaves } from './leave-support.js';
 import { leaveDecisionOutputSchema, pendingApprovalsOutputSchema } from './schemas.js';
@@ -34,6 +35,49 @@ async function findApprovableLeaves(
   );
 }
 
+/** TMS-4989: one-line team summary per request, as the approval screens show it. */
+export function teamSummaryOf(insight: TeamsoLeaveInsight): NonNullable<PendingApproval['team']> {
+  const overlaps = (insight.overlaps ?? []).map(o => ({
+    name: o.name || 'A colleague',
+    start: o.startDate ? String(o.startDate).slice(0, 10) : undefined,
+    end: o.endDate ? String(o.endDate).slice(0, 10) : undefined,
+    pending: o.pending === true,
+  }));
+  const people = new Set(overlaps.map(o => o.name));
+  const shiftDays = (insight.shiftDays ?? []).filter(Boolean);
+  const balance = typeof insight.balanceAfter === 'number' ? insight.balanceAfter : undefined;
+  const notes: string[] = [];
+  if (people.size) notes.push(`${people.size} more in the team off or waiting on these dates (${[...people].slice(0, 3).join(', ')})`);
+  if (balance !== undefined && balance < 0) notes.push(`balance after approval ${balance} days`);
+  if (shiftDays.length) notes.push(`planned shift on ${shiftDays.join(', ')}`);
+  const clean = notes.length === 0;
+  return {
+    summary: clean ? 'Looks fine: nobody in the team is off on these dates' : `Heads up: ${notes.join('; ')}`,
+    clean,
+    ...(balance !== undefined ? { balanceAfter: balance } : {}),
+    shiftDays,
+    overlaps,
+  };
+}
+
+/** Adds `team` to each approval; a server without the insights endpoint simply leaves it out. */
+async function attachTeamSummaries(client: TeamsoClient, approvals: PendingApproval[], signal?: AbortSignal) {
+  for (let i = 0; i < approvals.length; i += 100) {
+    const chunk = approvals.slice(i, i + 100);
+    let insights: TeamsoLeaveInsight[] = [];
+    try {
+      insights = await client.getLeaveDecisionInsights(chunk.map(a => a.leaveId), signal);
+    } catch {
+      return;
+    }
+    const byId = new Map(insights.map(item => [item.id, item]));
+    for (const approval of chunk) {
+      const insight = byId.get(approval.leaveId);
+      if (insight) approval.team = teamSummaryOf(insight);
+    }
+  }
+}
+
 export function registerListPendingApprovals(server: McpServer, client: TeamsoClient): void {
   server.registerTool(
     'list_pending_approvals',
@@ -49,6 +93,7 @@ export function registerListPendingApprovals(server: McpServer, client: TeamsoCl
       try {
         const { leaves, truncated } = await findApprovableLeaves(client, () => true, MAX_PENDING, extra.signal);
         const approvals = leaves.map(toPendingApproval);
+        await attachTeamSummaries(client, approvals, extra.signal);
         if (approvals.length === 0) {
           return toolResult('No leave requests are waiting for your approval.', {
             approvals,
@@ -57,13 +102,14 @@ export function registerListPendingApprovals(server: McpServer, client: TeamsoCl
           });
         }
         const table = markdownTable(
-          ['Leave id', 'Employee', 'Type', 'Dates', 'Days', 'Note'],
+          ['Leave id', 'Employee', 'Type', 'Dates', 'Days', 'Team', 'Note'],
           approvals.map(approval => [
             `\`${approval.leaveId}\``,
             approval.requester?.fullName,
             approval.leaveTypeName,
             formatDateRange(approval.start, approval.end),
             approval.workingDays,
+            approval.team?.summary,
             approval.description,
           ]),
         );

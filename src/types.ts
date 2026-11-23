@@ -349,6 +349,53 @@ export interface TeamsoGoalPage {
   pagination?: TeamsoPagination;
 }
 
+/** One progress check-in of a goal (TMS-5065), newest first in {@link TeamsoGoalProgressCard.entries}. */
+export interface TeamsoGoalProgressEntry {
+  id: string;
+  value?: number | null;
+  percent?: number | null;
+  status?: string | null;
+  comment?: string | null;
+  fileName?: string | null;
+  hasFile?: boolean;
+  createdAt?: string | null;
+  createdBy?: string | null;
+  createdByName?: string | null;
+  byOwner?: boolean;
+}
+
+/** `GET` and `POST /user-goal-progress/goal/{goalId}` (TMS-5065): the goal's progress card. */
+export interface TeamsoGoalProgressCard {
+  goalId: string;
+  goalName?: string | null;
+  userId?: string | null;
+  periodName?: string | null;
+  scaleCriterion?: string | null;
+  currency?: string | null;
+  otherText?: string | null;
+  isOther?: boolean;
+  targetValue?: number | null;
+  open?: boolean;
+  canAddProgress?: boolean;
+  /** `PERIOD_NOT_ACTIVE` or `GOAL_NOT_OPEN` when the goal takes no check-in now. */
+  closedReason?: string | null;
+  elapsedPercent?: number | null;
+  lastProgressValue?: number | null;
+  lastProgressPercent?: number | null;
+  lastProgressStatus?: string | null;
+  lastProgressAt?: string | null;
+  entries?: TeamsoGoalProgressEntry[];
+}
+
+/** Body of `POST /user-goal-progress/goal/{goalId}`. */
+export interface TeamsoGoalProgressRequest {
+  value?: number;
+  percent?: number;
+  status: string;
+  comment?: string;
+  withFile?: boolean;
+}
+
 /** Body of `POST /user-goal` and `PUT /user-goal/revise-and-approve/{id}` (`UserGoalRequestVo`). */
 export interface TeamsoGoalRequest {
   userId?: string;
@@ -413,6 +460,70 @@ export interface TeamsoPayslipListParams {
   size?: number;
   searchKey?: 'term' | 'status';
   searchValue?: string;
+}
+
+/** One line of the interactive payslip (TMS-5021). */
+export interface TeamsoPayslipViewLine {
+  key?: string;
+  code?: string | null;
+  /** EARNING, TOTAL, DEDUCTION, ADDITION or NET. */
+  kind?: string;
+  label?: string | null;
+  amount?: number | null;
+  explainKey?: string | null;
+  text?: string | null;
+  previous?: number | null;
+  change?: number | null;
+  /** SAME, UP, DOWN, NEW, ENDED; null without an earlier payslip. */
+  status?: string | null;
+  /** DAYS_WORKED, SALARY, OVERTIME, NEW_ITEM, ENDED_ITEM, AMOUNT_CHANGED, TAX_BRACKET, ... */
+  reason?: string | null;
+  reasonText?: string | null;
+}
+
+/** `GET /payroll/me/payslip-view` and `GET /payroll/payslip-view/{id}` (TMS-5021). */
+export interface TeamsoPayslipView {
+  payrollId?: string;
+  /** `yyyy-MM`. */
+  period?: string;
+  periodName?: string | null;
+  previousPeriod?: string | null;
+  previousPeriodName?: string | null;
+  firstPayroll?: boolean;
+  lines?: TeamsoPayslipViewLine[];
+  net?: {
+    after?: number | null;
+    before?: number | null;
+    delta?: number | null;
+    reasonsAvailable?: boolean;
+    reasons?: Array<{ code?: string; category?: string; label?: string | null; itemCode?: string | null; amount?: number | null }>;
+  };
+  summary?: string | null;
+  yearToDate?: {
+    year?: number;
+    months?: string[];
+    gross?: number | null;
+    net?: number | null;
+    incomeTax?: number | null;
+    stampTax?: number | null;
+    sgkEmployee?: number | null;
+    unemploymentEmployee?: number | null;
+    sgkTotal?: number | null;
+  } | null;
+  taxBracket?: {
+    band?: number;
+    rate?: number | null;
+    cumulativeBase?: number | null;
+    limit?: number | null;
+    remaining?: number | null;
+    nextBand?: number | null;
+    nextRate?: number | null;
+    nextPeriod?: string | null;
+    crossesNextMonth?: boolean;
+    /** crossing, safe, top or yearEnd. */
+    state?: string;
+    text?: string | null;
+  } | null;
 }
 
 /** `GET /payroll/download-file/{id}`: raw PDF bytes. */
@@ -1093,3 +1204,272 @@ export type ApiCallResponse =
     contentType: string;
     fileName?: string;
   };
+
+/** POST /leave/decision-insights item (TMS-4989). */
+export interface TeamsoLeaveInsight {
+  id: string;
+  balanceAfter?: number | null;
+  teamSize?: number;
+  shiftDays?: string[];
+  clean?: boolean;
+  overlaps?: Array<{
+    userId?: string;
+    name?: string;
+    startDate?: string;
+    endDate?: string;
+    pending?: boolean;
+    typeName?: string | null;
+  }>;
+}
+
+// ------------------------------------------------- TMS-5154: workforce modules
+
+/** An API time: ISO text (with or without an offset), epoch millis or a Jackson `[y, M, d, H, m]` array. */
+export type TeamsoTime = string | number | number[] | null;
+
+/** `avatarUser` of the PDKS answers. */
+export interface TeamsoPdksPerson {
+  id?: string;
+  name?: string | null;
+  secondName?: string | null;
+  surname?: string | null;
+}
+
+/** GET /pdks-qr/my-status. */
+export interface TeamsoAttendanceStatus {
+  moduleActive?: boolean;
+  userName?: string;
+  serverTime?: string;
+  timezone?: string;
+  shift?: { hasPlan?: boolean; start?: string | null; end?: string | null };
+  today?: {
+    checkIn?: string | null;
+    checkOut?: string | null;
+    onBreak?: boolean;
+    late?: boolean;
+    next?: string | null;
+    breakStartedAt?: string | null;
+  };
+  locations?: Array<{ id?: string; name?: string }>;
+  pendingExcuses?: Array<{ anomalyId?: string; type?: string; date?: string; minutes?: number | null; requested?: boolean }>;
+}
+
+/** GET /pdks-qr/dashboard. */
+export interface TeamsoAttendanceDashboard {
+  cameToday?: number;
+  atWork?: number;
+  noShow?: number;
+  notStarted?: number;
+  late?: number;
+  earlyLeave?: number;
+  onBreak?: number;
+  activeNow?: number;
+  openAnomalies?: number;
+  pendingExcuses?: number;
+  locationCount?: number;
+}
+
+/** GET /pdks-qr/dashboard/detail/{card}. */
+export interface TeamsoAttendanceCard {
+  rows?: Array<{
+    userId?: string;
+    userName?: string;
+    dateTime?: TeamsoTime;
+    minutes?: number | null;
+    locationName?: string | null;
+    plannedWindow?: string | null;
+    detail?: string | null;
+  }>;
+  movements?: unknown[];
+}
+
+/** A forgotten scan request (PDKS corrections). */
+export interface TeamsoScanCorrection {
+  id?: string;
+  day?: string | null;
+  type?: string;
+  requestedAt?: TeamsoTime;
+  suggestedAt?: TeamsoTime;
+  reason?: string | null;
+  note?: string | null;
+  status?: string;
+  decisionNote?: string | null;
+  decidedAt?: TeamsoTime;
+  createdAt?: TeamsoTime;
+  user?: TeamsoPdksPerson | null;
+  canDecide?: boolean;
+}
+
+/** GET /pdks-qr/corrections/me. */
+export interface TeamsoMyScanCorrections {
+  missing?: Array<{ day?: string; type?: string; suggestedAt?: TeamsoTime; otherMovementAt?: TeamsoTime }>;
+  requests?: TeamsoScanCorrection[];
+  limits?: { maxDaysBack?: number; monthlyLimit?: number; usedThisMonth?: number };
+  reasons?: string[];
+}
+
+/** A monthly timesheet summary row (timesheet attestation). */
+export interface TeamsoTimesheetMonth {
+  id?: string;
+  userId?: string;
+  name?: string;
+  personnelId?: string | null;
+  branchName?: string | null;
+  departmentName?: string | null;
+  year?: number;
+  month?: number;
+  status?: string;
+  reapproval?: boolean;
+  version?: number;
+  sentAt?: TeamsoTime;
+  respondedAt?: TeamsoTime;
+  remindedAt?: TeamsoTime;
+  openDisputes?: number;
+  disputedDays?: string[];
+  totals?: Record<string, number | null> | null;
+}
+
+/** GET /timesheet-attestation/mcp/rounds. */
+export interface TeamsoTimesheetRounds {
+  year?: number;
+  month?: number;
+  counts?: Record<string, number>;
+  rows?: TeamsoTimesheetMonth[];
+  notSent?: number;
+  monthOver?: boolean;
+  canSend?: boolean;
+}
+
+/** GET /shift/mcp/my-shifts. */
+export interface TeamsoMyShifts {
+  from?: string;
+  to?: string;
+  total?: number;
+  shifts?: Array<{
+    id?: string;
+    date?: string;
+    dayName?: string | null;
+    working?: boolean;
+    start?: string | null;
+    end?: string | null;
+    overnight?: boolean;
+    workingType?: string | null;
+    branchId?: string | null;
+    branchName?: string | null;
+    note?: string | null;
+    breaks?: Array<{ start?: string | null; end?: string | null }>;
+  }>;
+}
+
+/** GET /expense-type/listAllByActive item. */
+export interface TeamsoExpenseType {
+  id: string;
+  name?: string;
+  abbreviation?: string | null;
+  status?: boolean;
+  maxAmount?: number | null;
+  currency?: string | null;
+  description?: string | null;
+  allowLimitOverrun?: boolean | null;
+}
+
+/** GET /expense-management/groups item. */
+export interface TeamsoExpenseGroup {
+  id: string;
+  title?: string | null;
+  description?: string | null;
+  status?: string;
+  owner?: { id?: string; fullName?: string | null } | null;
+  departmentName?: string | null;
+  receiptCount?: number;
+  totals?: Array<{ currency?: string; amount?: number; payable?: number }>;
+  createdAt?: TeamsoTime;
+  submittedAt?: TeamsoTime;
+  receiptDate?: string | null;
+  approvalQueue?: number | null;
+  currentStepLabel?: string | null;
+  revisionNo?: number | null;
+  limitOverrun?: boolean;
+  answer?: string | null;
+}
+
+export interface TeamsoExpenseGroupPage {
+  items?: TeamsoExpenseGroup[];
+  pagination?: { page?: number; size?: number; totalRecords?: number; totalPages?: number };
+}
+
+/** POST /expense-form-detail body. */
+export interface TeamsoExpenseReceiptRequest {
+  expenseFormId: string;
+  expenseTypeId: string;
+  receiptAmount: number;
+  currencyType: string;
+  taxRate: number;
+  receiptDate: string;
+  expenseDescription: string;
+  paidAmountToEmployee: number;
+  paidAmountByCompanyCard: number;
+  advancePaymentAmount: number;
+}
+
+/** GET /expense-form/{id}/limit-check. */
+export interface TeamsoExpenseLimitCheck {
+  overrun?: boolean;
+  blocked?: boolean;
+  warnings?: Array<Record<string, unknown>>;
+}
+
+/** GET /job-posting/list-with-candidate-counts item. */
+export interface TeamsoJobPosting {
+  id: string;
+  positionName?: string | null;
+  location?: string | null;
+  status?: string | null;
+  candidateCount?: number;
+  sharedDate?: TeamsoTime;
+  daysSinceShared?: number | null;
+  workModel?: string | null;
+  workingType?: string | null;
+  experienceYear?: string | null;
+  departmentNames?: string[] | null;
+}
+
+/** GET /job-posting/list-candidate/{id}/pagination item. */
+export interface TeamsoJobCandidate {
+  id: string;
+  name?: string | null;
+  surname?: string | null;
+  status?: string | null;
+  subStatus?: string | null;
+  cvScore?: string | number | null;
+  criteriaFit?: number | null;
+  aiReview?: string | null;
+  location?: string | null;
+  experience?: string | null;
+  isFavorite?: boolean;
+  createdAt?: TeamsoTime;
+}
+
+export interface TeamsoStandardPage<T> {
+  items?: T[];
+  pagination?: { currentPage?: number; pageSize?: number; totalRecords?: number; totalPages?: number; hasNext?: boolean };
+  filters?: { statusCounts?: Record<string, number> | null } | null;
+}
+
+/** GET /onboarding/pagination item. */
+export interface TeamsoOnboarding {
+  id: string;
+  name?: string | null;
+  secondName?: string | null;
+  surname?: string | null;
+  branchId?: string | null;
+  branch?: { id?: string; name?: string | null } | null;
+  status?: string | null;
+  active?: boolean;
+  isConfirmed?: boolean;
+  isConfirmedPhoneNumber?: boolean;
+  approvalQueue?: number;
+  rejectReason?: string | null;
+  hasTransferFailure?: boolean;
+  startDateHistory?: Array<{ id?: string; startDate?: string | null }> | null;
+}

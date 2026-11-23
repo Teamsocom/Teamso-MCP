@@ -3,8 +3,8 @@ import { z } from 'zod';
 import type { TeamsoClient } from '../client.js';
 import { markdownTable } from '../utils/format.js';
 import { apiErrorResult, errorResult, toolResult } from '../utils/results.js';
-import { toPayslip } from '../utils/structured.js';
-import { payslipListOutputSchema, payslipPdfOutputSchema } from './schemas.js';
+import { compact, optionalNumber, optionalString, toPayslip } from '../utils/structured.js';
+import { payslipExplanationOutputSchema, payslipListOutputSchema, payslipPdfOutputSchema } from './schemas.js';
 import { READ_ONLY, idSchema } from './shared.js';
 
 export function registerListMyPayslips(server: McpServer, client: TeamsoClient): void {
@@ -106,6 +106,123 @@ export function registerGetPayslipPdf(server: McpServer, client: TeamsoClient): 
         return apiErrorResult(error, {
           notFound: 'Teamso has no payslip PDF with that id for you (it may not be sent to you yet). '
             + 'Find the id with `list_my_payslips`.',
+        });
+      }
+    },
+  );
+}
+
+/** Amount as `1.234,56`-free plain text with two decimals (`1234.56`), signed when asked. */
+function money(value: number | undefined, signed = false): string {
+  if (value === undefined) return '-';
+  const text = Math.abs(value).toFixed(2);
+  if (!signed) return value < 0 ? `-${text}` : text;
+  return value > 0 ? `+${text}` : value < 0 ? `-${text}` : text;
+}
+
+export function registerExplainMyPayslip(server: McpServer, client: TeamsoClient): void {
+  server.registerTool(
+    'explain_my_payslip',
+    {
+      title: 'Explain my payslip',
+      description: 'Why the caller\'s pay went down or up ("maaşım neden düştü"), from their own closed payslip: '
+        + 'net pay against the previous payslip with its reasons (days worked, overtime, a new or ended payment or '
+        + 'deduction, tax band change, minimum wage exemption, social security ceiling), every line with a plain '
+        + 'explanation, year to date totals of closed periods and a warning when next month\'s income tax band may '
+        + 'change. Free, no AI credit. Default: the latest payslip; `month` (yyyy-MM) or `payslip_id` picks another.',
+      inputSchema: {
+        month: z.string().trim().regex(/^\d{4}-\d{2}$/, 'month must be `yyyy-MM`').optional()
+          .describe('Payroll month `yyyy-MM` (default the latest payslip).'),
+        payslip_id: idSchema('Id of one of the caller\'s own payslips.').optional(),
+      },
+      outputSchema: payslipExplanationOutputSchema,
+      annotations: READ_ONLY,
+    },
+    async ({ month, payslip_id }, extra) => {
+      try {
+        const view = await client.getPayslipView({ payslipId: payslip_id, month }, extra.signal);
+        const lines = (view.lines ?? []).filter(l => l.key && l.kind);
+        const structured = compact({
+          payslipId: view.payrollId ?? payslip_id ?? '',
+          period: view.period ?? month ?? '',
+          previousPeriod: optionalString(view.previousPeriod),
+          netPay: optionalNumber(view.net?.after) ?? 0,
+          previousNetPay: optionalNumber(view.net?.before),
+          netChange: optionalNumber(view.net?.delta),
+          summary: optionalString(view.summary),
+          reasons: (view.net?.reasons ?? []).filter(r => optionalNumber(r.amount)).map(r => ({
+            category: r.category ?? r.code ?? 'OTHER',
+            label: optionalString(r.label) ?? r.code ?? '-',
+            amount: optionalNumber(r.amount)!,
+          })),
+          changedLines: lines.filter(l => l.status && l.status !== 'SAME').map(l => compact({
+            key: l.key!,
+            label: optionalString(l.label) ?? l.key!,
+            kind: l.kind!,
+            amount: optionalNumber(l.amount) ?? 0,
+            previous: optionalNumber(l.previous),
+            change: optionalNumber(l.change),
+            status: l.status!,
+            reason: optionalString(l.reason),
+            reasonText: optionalString(l.reasonText),
+          })),
+          lines: lines.map(l => compact({
+            key: l.key!,
+            label: optionalString(l.label) ?? l.key!,
+            kind: l.kind!,
+            amount: optionalNumber(l.amount) ?? 0,
+            explanation: optionalString(l.text),
+          })),
+          yearToDate: view.yearToDate && typeof view.yearToDate.year === 'number' ? {
+            year: view.yearToDate.year,
+            months: view.yearToDate.months ?? [],
+            gross: optionalNumber(view.yearToDate.gross) ?? 0,
+            net: optionalNumber(view.yearToDate.net) ?? 0,
+            incomeTax: optionalNumber(view.yearToDate.incomeTax) ?? 0,
+            stampTax: optionalNumber(view.yearToDate.stampTax) ?? 0,
+            socialSecurity: optionalNumber(view.yearToDate.sgkTotal) ?? 0,
+          } : undefined,
+          taxBracket: view.taxBracket && typeof view.taxBracket.band === 'number' ? compact({
+            band: view.taxBracket.band,
+            rate: optionalNumber(view.taxBracket.rate),
+            state: view.taxBracket.state ?? 'safe',
+            crossesNextMonth: view.taxBracket.crossesNextMonth === true,
+            nextPeriod: optionalString(view.taxBracket.nextPeriod),
+            remaining: optionalNumber(view.taxBracket.remaining),
+            text: optionalString(view.taxBracket.text),
+          }) : undefined,
+        });
+        const parts = [`## Payslip ${structured.period}`];
+        if (structured.summary) parts.push(structured.summary);
+        if (structured.reasons.length) {
+          parts.push(`### Why the net pay changed since ${structured.previousPeriod ?? 'last month'}\n\n`
+            + markdownTable(['Reason', 'Effect on net'], structured.reasons.map(r => [r.label, money(r.amount, true)])));
+        }
+        if (structured.changedLines.length) {
+          parts.push('### Changed lines\n\n' + markdownTable(['Line', 'Now', 'Last month', 'Why'],
+            structured.changedLines.map(l => [l.label, money(l.amount), money(l.previous), l.reasonText ?? l.reason ?? ''])));
+        }
+        if (structured.taxBracket?.text) {
+          parts.push(`${structured.taxBracket.crossesNextMonth ? '**Tax band warning:** ' : ''}${structured.taxBracket.text}`);
+        }
+        if (structured.yearToDate) {
+          const y = structured.yearToDate;
+          parts.push(`Year ${y.year} so far (${y.months.length} closed months): gross ${money(y.gross)}, net `
+            + `${money(y.net)}, income tax ${money(y.incomeTax)}, stamp tax ${money(y.stampTax)}, social security `
+            + `${money(y.socialSecurity)} TRY.`);
+        }
+        return toolResult(parts.join('\n\n'), structured);
+      } catch (error) {
+        return apiErrorResult(error, {
+          byCode: {
+            PAYSLIP_VIEW_NOT_AVAILABLE: 'There is no closed payslip calculated in Teamso for that month (uploaded '
+              + 'PDF payslips and open payroll periods cannot be explained). Check the months with '
+              + '`list_my_payslips` and open the PDF with `get_payslip_pdf`.',
+            PERMISSION_DENIED: 'That payslip is not yours. Only the caller\'s own payslips can be explained; take the '
+              + 'id from `list_my_payslips`.',
+            INVALID_INPUT_PARAMETERS: 'Give `month` as `yyyy-MM`.',
+          },
+          notFound: 'Teamso has no interactive payslip endpoint yet (older Teamso version). Use `get_payslip_pdf`.',
         });
       }
     },
