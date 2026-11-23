@@ -55,6 +55,8 @@ export const LEAVE_STATUSES = {
   awaiting_usage_approval: 4,
   completed: 5,
   awaiting_document: 6,
+  // TMS-4990: an approved leave cancelled without being deleted (kept with its reason)
+  cancelled: 7,
 } as const;
 
 export type LeaveStatus = keyof typeof LEAVE_STATUSES;

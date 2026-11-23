@@ -257,6 +257,7 @@ export function defaultRoutes() {
     ['GET /working-days/getWorkingDaysByMe', () => envelope(WORKING_DAYS)],
     ['GET /public-holiday/getPublicHolidayByMe', () => envelope({ id: 'ph-1', name: 'Resmi tatiller' })],
     [/^GET \/leave\/dayCalculator\//, () => envelope({ totalWorkingDays: 3, returnToWorkDate: '2026-11-05 08:30' })],
+    ['POST /leave/decision-insights', () => envelope([], 'GET_SUCCESS')],
     ['POST /leave/controlToAddLeave', () => envelope({ allUserError: [], singleUserError: [] })],
     ['GET /sms/generateToken', () => envelope(undefined, 'INSERT_SUCCESS', { message: 'Insert Success' })],
     [`GET /sms/checkToken/${VALID_OTP}`, () => envelope(undefined, 'INSERT_SUCCESS', { message: 'validation successful' })],
